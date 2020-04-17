@@ -1,0 +1,54 @@
+scalar DateTime
+
+type Query {
+  info: String!
+  accountList(filter: String, skip: Int, first: Int, orderBy: AccountOrderByInput): AccountList!
+}
+
+enum AccountOrderByInput {
+  name_ASC
+  name_DESC
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+}
+
+type AccountList {
+  accounts: [Account!]!
+  count: Int!
+  total: Float!
+}
+
+type Mutation {
+  createAccount(name: String!, balance: Float!, color: String!): Account!
+  updateAccount(id: ID!, name: String!, balance: Float!, color: String!): Account!
+  signup(email: String!, password: String!, name: String!): AuthPayload
+  login(email: String!, password: String!): AuthPayload
+}
+
+type Subscription {
+  newAccount: Account
+}
+
+type AuthPayload {
+  token: String
+  user: User
+}
+
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  accounts: [Account!]!
+}
+
+type Account {
+  id: ID!
+  name: String!
+  balance: Float!
+  color: String
+  updatedAt: DateTime!
+  createdAt: DateTime!
+  createdBy: User
+}
