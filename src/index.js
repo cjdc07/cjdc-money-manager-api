@@ -5,7 +5,9 @@ const Mutation = require('./resolvers/Mutation');
 const Subscription = require('./resolvers/Subscription');
 const User = require('./resolvers/User');
 const Account = require('./resolvers/Account');
-// const Vote = require('./resolvers/Vote');
+const Category = require('./resolvers/Category');
+const Expense = require('./resolvers/Expense');
+const Income = require('./resolvers/Income');
 const mongoose = require('mongoose');
 const { GraphQLServer } = require('graphql-yoga');
 
@@ -31,7 +33,9 @@ const resolvers = {
   Subscription,
   User,
   Account,
-  // Vote,
+  Category,
+  Expense,
+  Income,
 }
 
 const server = new GraphQLServer({

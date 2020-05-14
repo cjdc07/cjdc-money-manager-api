@@ -3,6 +3,9 @@ scalar DateTime
 type Query {
   info: String!
   accountList(filter: String, skip: Int, first: Int, orderBy: AccountOrderByInput): AccountList!
+  incomeList(accountId: String, skip: Int, first: Int): IncomeList!
+  expenseList(accountId: String, skip: Int, first: Int): ExpenseList!
+  categoryList(transactionType: TransactionType!): CategoryList!
 }
 
 enum AccountOrderByInput {
@@ -14,15 +17,47 @@ enum AccountOrderByInput {
   updatedAt_DESC
 }
 
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  GENERAL
+}
+
 type AccountList {
   accounts: [Account!]!
   count: Int!
   total: Float!
 }
 
+type IncomeList {
+  incomes: [Income!]!
+  count: Int!
+  total: Float!
+}
+
+type ExpenseList {
+  expenses: [Expense!]!
+  count: Int!
+  total: Float!
+}
+
+type CategoryList {
+  categories: [Category!]!
+  count: Int!
+}
+
 type Mutation {
   createAccount(name: String!, balance: Float!, color: String!): Account!
   updateAccount(id: ID!, name: String!, balance: Float!, color: String!): Account!
+  deleteAccount(id: ID!): Account!
+  createIncome(description: String!, payer: String!, category: String!, amount: Float!, notes: String, account: ID!): Income!
+  updateIncome(id: ID!, description: String!, payer: String!, category: String!, amount: Float!, notes: String, account: ID!): Income!
+  deleteIncome(id: ID!): Income
+  createExpense(description: String!, recipient: String!, category: String!, amount: Float!, notes: String, account: ID!): Expense!
+  updateExpense(id: ID!, description: String!, recipient: String!, category: String!, amount: Float!, notes: String, account: ID!): Expense!
+  deleteExpense(id: ID!): Expense
+  createCategory(value: String!, transactionType: TransactionType!): Category!
   signup(email: String!, password: String!, name: String!): AuthPayload
   login(email: String!, password: String!): AuthPayload
 }
@@ -40,7 +75,6 @@ type User {
   id: ID!
   name: String!
   email: String!
-  accounts: [Account!]!
 }
 
 type Account {
@@ -48,6 +82,43 @@ type Account {
   name: String!
   balance: Float!
   color: String
+  updatedAt: DateTime!
+  createdAt: DateTime!
+  createdBy: User
+}
+
+# TODO: combine Income, Expense, Transfer to one type called Transaction
+
+type Income {
+  id: ID!
+  payer: String!
+  category: Category!
+  amount: Float!
+  description: String!
+  notes: String
+  updatedAt: DateTime!
+  createdAt: DateTime!
+  createdBy: User
+  account: Account!
+}
+
+type Expense {
+  id: ID!
+  recipient: String!
+  category: Category!
+  amount: Float!
+  description: String!
+  notes: String
+  updatedAt: DateTime!
+  createdAt: DateTime!
+  createdBy: User
+  account: Account!
+}
+
+type Category {
+  id: ID!
+  value: String!
+  transactionType: TransactionType!
   updatedAt: DateTime!
   createdAt: DateTime!
   createdBy: User

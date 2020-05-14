@@ -1,0 +1,10 @@
+const TRANSACTION_TYPE = {
+  INCOME: 'INCOME',
+  EXPENSE: 'EXPENSE',
+  TRANSFER: 'TRANSFER',
+  GENERAL: 'GENERAL',
+}
+
+module.exports = {
+  TRANSACTION_TYPE,
+}
