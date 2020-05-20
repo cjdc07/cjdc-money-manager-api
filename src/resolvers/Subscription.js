@@ -1,13 +1,13 @@
-function newAccountSubscribe(parent, args, context, info) {
-  return context.prisma.$subscribe.account({ mutation_in: ['CREATED'] }).node()
-}
+// function newAccountSubscribe(parent, args, context, info) {
+//   return context.prisma.$subscribe.account({ mutation_in: ['CREATED'] }).node()
+// }
 
-const newAccount = {
-  subscribe: newAccountSubscribe,
-  resolve: payload => {
-    return payload
-  },
-}
+// const newAccount = {
+//   subscribe: newAccountSubscribe,
+//   resolve: payload => {
+//     return payload
+//   },
+// }
 
 // function newVoteSubscribe(parent, args, context, info) {
 //   return context.prisma.$subscribe.vote({ mutation_in: ['CREATED'] }).node()
@@ -20,7 +20,7 @@ const newAccount = {
 //   },
 // }
 
-module.exports = {
-  newAccount,
-  // newVote,
-}
+// module.exports = {
+//   // newAccount,
+//   // newVote,
+// }

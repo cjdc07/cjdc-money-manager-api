@@ -250,12 +250,11 @@ async function login(parent, args, context) {
   const { email, password } = args;
   const user = await User.findOne({email});
 
-  // TODO: Add error handling
   if (!user) {
     throw new Error('No such user found')
   }
 
-  const valid = await bcrypt.compare(args.password, user.password)
+  const valid = await bcrypt.compare(password, user.password)
 
   if (!valid) {
     throw new Error('Invalid password')
