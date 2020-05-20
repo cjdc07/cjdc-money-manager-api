@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const mongoose = require('mongoose');
 const { APP_SECRET, getUserId } = require('../utils')
-const { TRANSACTION_TYPE } = require('../constants')
+const { ACCOUNT_ADJUSTMENTS_CATEGORY, TRANSACTION_TYPE } = require('../constants')
 
 async function createAccount(parent, args, context) {
   const { name, balance, color } = args;
@@ -17,9 +17,13 @@ async function createAccount(parent, args, context) {
 
   await account.save();
 
-  if (balance > 0) {
-    const category = await Category.findOne({value: 'Account Adjustments'});
+  const category = await findOrCreateCategory(
+    ACCOUNT_ADJUSTMENTS_CATEGORY.value,
+    user,
+    ACCOUNT_ADJUSTMENTS_CATEGORY.transactionType,
+  );
 
+  if (balance > 0) {
     const income = new Income({
       description: 'Initial Balance',
       payer: 'Me',
@@ -31,8 +35,6 @@ async function createAccount(parent, args, context) {
 
     await income.save();
   } else if (balance < 0) {
-    const category = await Category.findOne({value: 'Account Adjustments'});
-
     const expense = new Expense({
       description: 'Initial Balance',
       recipient: 'Me',
@@ -54,9 +56,13 @@ async function updateAccount(parent, args, context) {
 
   const account = await Account.findById(id);
 
+  const category = await findOrCreateCategory(
+    ACCOUNT_ADJUSTMENTS_CATEGORY.value,
+    user,
+    ACCOUNT_ADJUSTMENTS_CATEGORY.transactionType,
+  );
+
   if (balance > account.balance) {
-    const category = await Category.findOne({value: 'Account Adjustments'});
-  
     const income = new Income({
       description: 'Account Adjustments',
       payer: 'Me',
@@ -68,12 +74,10 @@ async function updateAccount(parent, args, context) {
   
     await income.save();
   } else if (balance < account.balance) {
-    const category = await Category.findOne({value: 'Account Adjustments'});
-  
     const expense = new Expense({
       description: 'Account Adjustments',
       recipient: 'Me',
-      amount: balance - account.balance,
+      amount: account.balance - balance,
       category: mongoose.Types.ObjectId(category.id),
       account: mongoose.Types.ObjectId(account.id),
       createdBy: mongoose.Types.ObjectId(user)
