@@ -9,7 +9,8 @@ const Category = require('./resolvers/Category');
 const Expense = require('./resolvers/Expense');
 const Income = require('./resolvers/Income');
 const mongoose = require('mongoose');
-const { GraphQLServer } = require('graphql-yoga');
+const { ApolloServer } = require('apollo-server');
+const { importSchema } = require('graphql-import');
 
 const mongoDbUri = process.env.MONGODB_URI;
 mongoose.connect(
@@ -38,11 +39,11 @@ const resolvers = {
   Income,
 }
 
-const server = new GraphQLServer({
-  typeDefs: './src/schema.graphql',
+const server = new ApolloServer({
+  typeDefs: importSchema('./src/schema.graphql'),
   resolvers,
   context: request => ({
     ...request,
   }),
 })
-server.start(() => console.log(`Server is running on http://localhost:4000`))
+server.listen().then(({ url }) => console.log(`Server is running on ${url}`));
