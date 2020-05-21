@@ -39,6 +39,8 @@ const resolvers = {
   Income,
 }
 
+const port = process.env.PORT || 5000;
+
 const server = new ApolloServer({
   typeDefs: importSchema('./src/schema.graphql'),
   resolvers,
@@ -46,4 +48,4 @@ const server = new ApolloServer({
     ...request,
   }),
 })
-server.listen().then(({ url }) => console.log(`Server is running on ${url}`));
+server.listen({port}).then(({ url }) => console.log(`Server is running on ${url}`));
