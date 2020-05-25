@@ -4,16 +4,23 @@
   "license": "MIT",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "test": "jest"
   },
   "dependencies": {
+    "@shelf/jest-mongodb": "^1.1.5",
     "apollo-server": "^2.13.1",
+    "apollo-server-testing": "^2.13.1",
     "bcryptjs": "^2.4.3",
     "dotenv": "^8.2.0",
     "graphql": "^15.0.0",
     "graphql-import": "^1.0.2",
+    "jest": "^26.0.1",
     "jsonwebtoken": "^8.2.0",
     "mongoose": "^5.9.9"
+  },
+  "jest": {
+    "preset": "@shelf/jest-mongodb"
   },
   "devDependencies": {}
 }
