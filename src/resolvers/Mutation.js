@@ -5,15 +5,14 @@ const Income = require('../models/Income');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const mongoose = require('mongoose');
-const { APP_SECRET, getUserId } = require('../utils')
+const { APP_SECRET, findOrCreateCategory, getUserId } = require('../utils')
 const { ACCOUNT_ADJUSTMENTS_CATEGORY, TRANSACTION_TYPE } = require('../constants')
 
 async function createAccount(parent, args, context) {
   const { name, balance, color } = args;
   const user = getUserId(context);
 
-  const account = new Account({name, balance, color, createdBy: mongoose.Types.ObjectId(user)});
+  const account = new Account({name, balance, color, createdBy: user});
 
   await account.save();
 
@@ -23,14 +22,16 @@ async function createAccount(parent, args, context) {
     ACCOUNT_ADJUSTMENTS_CATEGORY.transactionType,
   );
 
+  console.log(category.id);
+
   if (balance > 0) {
     const income = new Income({
       description: 'Initial Balance',
       payer: 'Me',
       amount: balance,
-      category: mongoose.Types.ObjectId(category.id),
-      account: mongoose.Types.ObjectId(account.id),
-      createdBy: mongoose.Types.ObjectId(user)
+      category: category.id,
+      account: account.id,
+      createdBy: user,
     });
 
     await income.save();
@@ -38,10 +39,10 @@ async function createAccount(parent, args, context) {
     const expense = new Expense({
       description: 'Initial Balance',
       recipient: 'Me',
-      amount: balance,
-      category: mongoose.Types.ObjectId(category.id),
-      account: mongoose.Types.ObjectId(account.id),
-      createdBy: mongoose.Types.ObjectId(user)
+      amount: balance * -1,
+      category: category.id,
+      account: account.id,
+      createdBy: user,
     });
 
     await expense.save();
@@ -67,9 +68,9 @@ async function updateAccount(parent, args, context) {
       description: 'Account Adjustments',
       payer: 'Me',
       amount: balance - account.balance,
-      category: mongoose.Types.ObjectId(category.id),
-      account: mongoose.Types.ObjectId(account.id),
-      createdBy: mongoose.Types.ObjectId(user)
+      category: category.id,
+      account: account.id,
+      createdBy: user,
     });
   
     await income.save();
@@ -78,9 +79,9 @@ async function updateAccount(parent, args, context) {
       description: 'Account Adjustments',
       recipient: 'Me',
       amount: account.balance - balance,
-      category: mongoose.Types.ObjectId(category.id),
-      account: mongoose.Types.ObjectId(account.id),
-      createdBy: mongoose.Types.ObjectId(user)
+      category: category.id,
+      account:account.id,
+      createdBy: user,
     });
   
     await expense.save();
@@ -113,9 +114,9 @@ async function createIncome(parent, args, context) {
     payer,
     amount,
     notes,
-    category: mongoose.Types.ObjectId(category.id),
-    account: mongoose.Types.ObjectId(account),
-    createdBy: mongoose.Types.ObjectId(user)
+    category: category.id,
+    account: account,
+    createdBy: user,
   });
 
   await income.save();
@@ -137,7 +138,7 @@ async function updateIncome(parent, args, context) {
 
   const updatedIncome = await Income.findByIdAndUpdate(
     id,
-    { description, payer, amount, notes, account, category: mongoose.Types.ObjectId(category.id) },
+    { description, payer, amount, notes, account, category: category.id, },
     { new : true }
   );
 
@@ -171,9 +172,9 @@ async function createExpense(parent, args, context) {
     recipient,
     amount,
     notes,
-    category: mongoose.Types.ObjectId(category.id),
-    account: mongoose.Types.ObjectId(account),
-    createdBy: mongoose.Types.ObjectId(user)
+    category: category.id,
+    account: account,
+    createdBy: user,
   });
 
   await expense.save();
@@ -196,7 +197,7 @@ async function updateExpense(parent, args, context) {
 
   const updatedExpense = await Expense.findByIdAndUpdate(
     id,
-    { description, recipient, amount, notes, account, category: mongoose.Types.ObjectId(category.id) },
+    { description, recipient, amount, notes, account, category: category.id, },
     { new : true }
   );
 
@@ -226,7 +227,7 @@ async function createCategory(parent, args, context) {
   const category = new Category({
     value,
     transactionType,
-    createdBy: mongoose.Types.ObjectId(user)
+    createdBy: user,
   });
 
   await category.save();
@@ -268,22 +269,6 @@ async function login(parent, args, context) {
     token: jwt.sign({ userId: user.id }, APP_SECRET),
     user,
   }
-}
-
-async function findOrCreateCategory(category, user, transactionType) {
-  let result = await Category.findOne({value: category});
-
-  if (!result) {
-    result = new Category({
-      transactionType,
-      value: category,
-      createdBy: mongoose.Types.ObjectId(user)
-    });
-  
-    await result.save();
-  }
-
-  return result;
 }
 
 module.exports = {
