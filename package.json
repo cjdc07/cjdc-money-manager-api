@@ -8,9 +8,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@shelf/jest-mongodb": "^1.1.5",
     "apollo-server": "^2.13.1",
-    "apollo-server-testing": "^2.13.1",
     "bcryptjs": "^2.4.3",
     "dotenv": "^8.2.0",
     "graphql": "^15.0.0",
@@ -22,5 +20,9 @@
   "jest": {
     "preset": "@shelf/jest-mongodb"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@shelf/jest-mongodb": "^1.1.5",
+    "apollo-server-testing": "^2.13.1",
+    "nodemon": "^2.0.4"
+  }
 }
