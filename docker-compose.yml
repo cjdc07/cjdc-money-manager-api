@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cjdc07/cjdc-money-manager-api
+    container_name: cjdc-money-manager-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MONGODB_URI=$MONGODB_URI
+    ports:
+      - "80:8080"
+    volumes:
+      - ./:/home/node/app
+      - node_modules:/home/node/app/node_modules
+    networks:
+      - app-network
+
+  db:
+    image: mongo:4.1.8-xenial
+    container_name: db
+    restart: unless-stopped
+    ports:
+      - "27018:27017" # To access using compass on local
+    volumes:
+      - dbdata:/data/db
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  dbdata:
+  node_modules:
