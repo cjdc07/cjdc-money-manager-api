@@ -1,12 +1,11 @@
 const Account = require('../models/Account');
 const Category = require('../models/Category');
-const Expense = require('../models/Expense');
-const Income = require('../models/Income');
+const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const { APP_SECRET, findOrCreateCategory, getUserId } = require('../utils')
-const { ACCOUNT_ADJUSTMENTS_CATEGORY, TRANSACTION_TYPE } = require('../constants')
+const { TRANSACTION_TYPE } = require('../constants')
 
 async function createAccount(parent, args, context) {
   const { name, balance, color } = args;
@@ -17,35 +16,37 @@ async function createAccount(parent, args, context) {
   await account.save();
 
   const category = await findOrCreateCategory(
-    ACCOUNT_ADJUSTMENTS_CATEGORY.value,
+    'Account Adjustments',
     user,
-    ACCOUNT_ADJUSTMENTS_CATEGORY.transactionType,
+    TRANSACTION_TYPE.GENERAL,
   );
 
-  console.log(category.id);
-
   if (balance > 0) {
-    const income = new Income({
-      description: 'Initial Balance',
-      payer: 'Me',
+    const transaction = new Transaction({
+      account: account.id,
       amount: balance,
       category: category.id,
-      account: account.id,
       createdBy: user,
+      description: 'Initial Balance',
+      from: 'Me',
+      to: 'Me',
+      type: TRANSACTION_TYPE.INCOME,
     });
 
-    await income.save();
+    await transaction.save();
   } else if (balance < 0) {
-    const expense = new Expense({
-      description: 'Initial Balance',
-      recipient: 'Me',
+    const transaction = new Transaction({
+      account: account.id,
       amount: balance * -1,
       category: category.id,
-      account: account.id,
       createdBy: user,
+      description: 'Initial Balance',
+      from: 'Me',
+      to: 'Me',
+      type: TRANSACTION_TYPE.EXPENSE,
     });
 
-    await expense.save();
+    await transaction.save();
   }
 
   return account;
@@ -58,33 +59,37 @@ async function updateAccount(parent, args, context) {
   const account = await Account.findById(id);
 
   const category = await findOrCreateCategory(
-    ACCOUNT_ADJUSTMENTS_CATEGORY.value,
+    'Account Adjustments',
     user,
-    ACCOUNT_ADJUSTMENTS_CATEGORY.transactionType,
+    TRANSACTION_TYPE.GENERAL,
   );
 
   if (balance > account.balance) {
-    const income = new Income({
-      description: 'Account Adjustments',
-      payer: 'Me',
+    const transaction = new Transaction({
+      account: account.id,
       amount: balance - account.balance,
       category: category.id,
-      account: account.id,
       createdBy: user,
-    });
-  
-    await income.save();
-  } else if (balance < account.balance) {
-    const expense = new Expense({
       description: 'Account Adjustments',
-      recipient: 'Me',
+      from: 'Me',
+      to: 'Me',
+      type: TRANSACTION_TYPE.INCOME,
+    });
+
+    await transaction.save();
+  } else if (balance < account.balance) {
+    const transaction = new Transaction({
+      account: account.id,
       amount: account.balance - balance,
       category: category.id,
-      account:account.id,
       createdBy: user,
+      description: 'Account Adjustments',
+      from: 'Me',
+      to: 'Me',
+      type: TRANSACTION_TYPE.EXPENSE,
     });
-  
-    await expense.save();
+
+    await transaction.save();
   }
 
   const updated = await Account.findByIdAndUpdate(id, { name, balance, color }, {new : true} );
@@ -95,138 +100,138 @@ async function updateAccount(parent, args, context) {
 async function deleteAccount(parent, args, context) {
   const { id } = args;
 
-  const account = await Account.findOneAndDelete({_id: id});
+  const account = await Account.findOneAndDelete({ _id: id });
 
-  await Income.deleteMany({ account: id });
-  await Expense.deleteMany({ account: id });
+  await Transaction.deleteMany({ account: id, type: { $ne: TRANSACTION_TYPE.TRANSFER } });
+
+  // TODO: when transaction is transfer, transfer transfer account ownership to 'to' account
 
   return account;
 }
 
-async function createIncome(parent, args, context) {
-  const { description, payer, amount, notes, account } = args;
+async function createTransaction(parent, args, context) {
+  const { amount, description, from, notes, to, type } = args;
   const user = getUserId(context);
+  const category = await findOrCreateCategory(args.category, user, type);
+  const account = await Account.findById(args.account);
+  let balance = account.balance;
 
-  const category = await findOrCreateCategory(args.category, user, TRANSACTION_TYPE.INCOME);
+  if (type === TRANSACTION_TYPE.TRANSFER) {
+    if (amount < 1) {
+      throw new Error('Cannot transfer amount less than 1!')
+    }
 
-  const income = new Income({
-    description,
-    payer,
+    if (amount > balance) {
+      throw new Error('Insufficient amount to transfer.');
+    }
+  }
+
+  const transaction = new Transaction({
     amount,
+    description,
+    from,
     notes,
+    to,
+    type,
     category: category.id,
     account: account,
-    createdBy: user,
   });
 
-  await income.save();
+  if (type === TRANSACTION_TYPE.INCOME) {
+    balance = balance += amount;
+  } else if (type === TRANSACTION_TYPE.EXPENSE) {
+    balance = balance -= amount;
+  } else if (type === TRANSACTION_TYPE.TRANSFER) {
+    balance = balance -= amount;
+    const toAccount = await Account.findById(to);
+    await Account.findByIdAndUpdate(to, { balance: toAccount.balance += amount });
+  }
 
-  const old = await Account.findById(account);
+  await transaction.save();
+  await Account.findByIdAndUpdate(account, { balance });
 
-  await Account.findByIdAndUpdate(account, { balance: old.balance += income.amount });
-
-  return income;
+  return transaction;
 }
 
-async function updateIncome(parent, args, context) {
-  const { id, description, payer, amount, notes, account } = args;
+async function updateTransaction(parent, args, context) {
+  const { id, amount, description, from, notes, to, type } = args;
   const user = getUserId(context);
+  const category = await findOrCreateCategory(args.category, user, type);
+  const oldTransaction = await Transaction.findById(id);
+  const account = await Account.findById(args.account);
+  let balance = account.balance;
 
-  const oldIncome = await Income.findById(id);
+  if (type === TRANSACTION_TYPE.TRANSFER) {
+    if (from === account.id && amount < 1) {
+      throw new Error('Cannot transfer amount less than 1!')
+    }
 
-  const category = await findOrCreateCategory(args.category, user, TRANSACTION_TYPE.INCOME);
+    if (from === account.id && amount > balance) {
+      throw new Error('Insufficient amount to transfer.');
+    }
+  }
 
-  const updatedIncome = await Income.findByIdAndUpdate(
+  const updatedTransaction = await Transaction.findByIdAndUpdate(
     id,
-    { description, payer, amount, notes, account, category: category.id, },
-    { new : true }
+    { amount, description, from, notes, to, category: category.id, account: account, },
+    { new: true },
   );
 
-  const oldAccount = await Account.findById(account);
+  if (type === TRANSACTION_TYPE.INCOME) {
+    balance = (balance - oldTransaction.amount) + amount;
+  } else if (type === TRANSACTION_TYPE.EXPENSE) {
+    balance = (balance + oldTransaction.amount) - amount;
+  } else if (type === TRANSACTION_TYPE.TRANSFER) {
+    if (from === account.id) {
+      balance = (balance + oldTransaction.amount) - amount;
+      const toAccount = await Account.findById(to);
+      await Account.findByIdAndUpdate(to, { balance: (toAccount.balance - oldTransaction.amount) + amount });
+    } else {
+      balance = (balance - oldTransaction.amount) + amount;
+      const fromAccount = await Account.findById(from);
+      await Account.findByIdAndUpdate(from, { balance: (fromAccount.balance + oldTransaction.amount) - amount });
+    }
+  }
 
-  await Account.findByIdAndUpdate(account, { balance: (oldAccount.balance - oldIncome.amount) + amount });
+  await Account.findByIdAndUpdate(account, { balance }, { new: true });
 
-  return updatedIncome;
+  return updatedTransaction;
 }
 
-async function deleteIncome(parent, args, context) {
+async function deleteTransaction(parent, args, context) {
   const { id } = args;
+  const transaction = await Transaction.findOneAndDelete({ _id: id });
+  const account = await Account.findById(transaction.account);
+  let balance = account.balance;
 
-  const income = await Income.findOneAndDelete({_id: id});
+  if (transaction.type === TRANSACTION_TYPE.INCOME) {
+    balance = account.balance - transaction.amount;
+  } else if (transaction.type === TRANSACTION_TYPE.EXPENSE) {
+    balance = account.balance + transaction.amount;
+  } else if (transaction.type === TRANSACTION_TYPE.TRANSFER) {
+    if (transaction.from === account.id) {
+      balance = account.balance + transaction.amount;
+      const toAccount = await Account.findById(transaction.to);
+      await Account.findByIdAndUpdate(transaction.to, { balance: toAccount.balance - transaction.amount });
+    } else {
+      balance = account.balance - transaction.amount;
+      const fromAccount = await Account.findById(transaction.from);
+      await Account.findByIdAndUpdate(transaction.from, { balance: fromAccount.balance + transaction.amount });
+    }
+  }
 
-  const oldAccount = await Account.findById(income.account);
+  await Account.findByIdAndUpdate(transaction.account, { balance });
 
-  await Account.findByIdAndUpdate(income.account, { balance: oldAccount.balance - income.amount });
-
-  return income;
-}
-
-async function createExpense(parent, args, context) {
-  const { description, recipient, amount, notes, account } = args;
-  const user = getUserId(context);
-
-  const category = await findOrCreateCategory(args.category, user, TRANSACTION_TYPE.EXPENSE);
-
-  const expense = new Expense({
-    description,
-    recipient,
-    amount,
-    notes,
-    category: category.id,
-    account: account,
-    createdBy: user,
-  });
-
-  await expense.save();
-
-  const old = await Account.findById(account);
-
-  await Account.findByIdAndUpdate(account, { balance: old.balance -= expense.amount });
-
-  return expense;
-}
-
-
-async function updateExpense(parent, args, context) {
-  const { id, description, recipient, amount, notes, account } = args;
-  const user = getUserId(context);
-
-  const oldExpense = await Expense.findById(id);
-
-  const category = await findOrCreateCategory(args.category, user, TRANSACTION_TYPE.EXPENSE);
-
-  const updatedExpense = await Expense.findByIdAndUpdate(
-    id,
-    { description, recipient, amount, notes, account, category: category.id, },
-    { new : true }
-  );
-
-  const oldAccount = await Account.findById(account);
-
-  await Account.findByIdAndUpdate(account, { balance: (oldAccount.balance + oldExpense.amount) - amount });
-
-  return updatedExpense;
-}
-
-async function deleteExpense(parent, args, context) {
-  const { id } = args;
-
-  const expense = await Expense.findOneAndDelete({_id: id});
-
-  const oldAccount = await Account.findById(expense.account);
-
-  await Account.findByIdAndUpdate(expense.account, { balance: oldAccount.balance + expense.amount });
-
-  return expense;
+  return transaction;
 }
 
 async function createCategory(parent, args, context) {
-  const { value, transactionType } = args;
+  const { value, transaction } = args;
   const user = getUserId(context);
 
   const category = new Category({
     value,
-    transactionType,
+    transaction,
     createdBy: user,
   });
 
@@ -275,12 +280,9 @@ module.exports = {
   createAccount,
   updateAccount,
   deleteAccount,
-  createIncome,
-  updateIncome,
-  deleteIncome,
-  createExpense,
-  updateExpense,
-  deleteExpense,
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
   createCategory,
   signup,
   login,

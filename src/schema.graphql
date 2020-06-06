@@ -3,12 +3,23 @@ scalar DateTime
 type Query {
   info: String!
   accountList(filter: String, skip: Int, first: Int, orderBy: AccountOrderByInput): AccountList!
-  incomeList(accountId: String, skip: Int, first: Int): IncomeList!
-  expenseList(accountId: String, skip: Int, first: Int): ExpenseList!
-  categoryList(transactionType: TransactionType!): CategoryList!
+  # TODO: filter by what? should this be an object? or default
+  transactionList(filter: String, account: ID!, type: TransactionType, skip: Int, first: Int, orderBy: TransactionOrderByInput): TransactionList!
+  categoryList: CategoryList!
 }
 
+# TODO: Convert to what mongodb is using
 enum AccountOrderByInput {
+  name_ASC
+  name_DESC
+  createdAt_ASC
+  createdAt_DESC
+  updatedAt_ASC
+  updatedAt_DESC
+}
+
+# TODO: Convert to what mongodb is using
+enum TransactionOrderByInput {
   name_ASC
   name_DESC
   createdAt_ASC
@@ -21,7 +32,6 @@ enum TransactionType {
   INCOME
   EXPENSE
   TRANSFER
-  GENERAL
 }
 
 type AccountList {
@@ -30,14 +40,8 @@ type AccountList {
   total: Float!
 }
 
-type IncomeList {
-  incomes: [Income!]!
-  count: Int!
-  total: Float!
-}
-
-type ExpenseList {
-  expenses: [Expense!]!
+type TransactionList {
+  transactions: [Transaction!]!
   count: Int!
   total: Float!
 }
@@ -47,23 +51,36 @@ type CategoryList {
   count: Int!
 }
 
+# Will removing ! make return type lenient?
 type Mutation {
   createAccount(name: String!, balance: Float!, color: String!): Account!
   updateAccount(id: ID!, name: String!, balance: Float!, color: String!): Account!
   deleteAccount(id: ID!): Account!
-  createIncome(description: String!, payer: String!, category: String!, amount: Float!, notes: String, account: ID!): Income!
-  updateIncome(id: ID!, description: String!, payer: String!, category: String!, amount: Float!, notes: String, account: ID!): Income!
-  deleteIncome(id: ID!): Income
-  createExpense(description: String!, recipient: String!, category: String!, amount: Float!, notes: String, account: ID!): Expense!
-  updateExpense(id: ID!, description: String!, recipient: String!, category: String!, amount: Float!, notes: String, account: ID!): Expense!
-  deleteExpense(id: ID!): Expense
-  createCategory(value: String!, transactionType: TransactionType!): Category!
-  signup(email: String!, password: String!, name: String!): AuthPayload
-  login(email: String!, password: String!): AuthPayload
-}
-
-type Subscription {
-  newAccount: Account
+  createTransaction(
+    account: ID!,
+    amount: Float!,
+    category: String!,
+    description: String!,
+    from: String!,
+    notes: String,
+    to: String!,
+    type: TransactionType!,
+  ): Transaction!
+  updateTransaction(
+    id: ID!,
+    account: ID!
+    amount: Float!,
+    category: String!,
+    description: String!,
+    from: String!,
+    notes: String,
+    to: String!,
+    type: TransactionType!,
+  ): Transaction!
+  deleteTransaction(id: ID!): Transaction!
+  createCategory(value: String!, transaction: TransactionType!): Category!
+  signup(email: String!, password: String!, name: String!): AuthPayload!
+  login(email: String!, password: String!): AuthPayload!
 }
 
 type AuthPayload {
@@ -87,38 +104,25 @@ type Account {
   createdBy: User
 }
 
-# TODO: combine Income, Expense, Transfer to one type called Transaction
-
-type Income {
+type Transaction {
   id: ID!
-  payer: String!
-  category: Category!
+  account: Account!
   amount: Float!
-  description: String!
-  notes: String
-  updatedAt: DateTime!
+  category: Category!
   createdAt: DateTime!
   createdBy: User
-  account: Account!
-}
-
-type Expense {
-  id: ID!
-  recipient: String!
-  category: Category!
-  amount: Float!
   description: String!
+  from: String!
   notes: String
+  to: String!
+  type: TransactionType!
   updatedAt: DateTime!
-  createdAt: DateTime!
-  createdBy: User
-  account: Account!
 }
 
 type Category {
   id: ID!
   value: String!
-  transactionType: TransactionType!
+  transaction: TransactionType!
   updatedAt: DateTime!
   createdAt: DateTime!
   createdBy: User

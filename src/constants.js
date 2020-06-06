@@ -5,12 +5,6 @@ const TRANSACTION_TYPE = {
   GENERAL: 'GENERAL',
 }
 
-const ACCOUNT_ADJUSTMENTS_CATEGORY = {
-  value: 'Account Adjustments',
-  transactionType: TRANSACTION_TYPE.GENERAL,
-}
-
 module.exports = {
-  ACCOUNT_ADJUSTMENTS_CATEGORY,
   TRANSACTION_TYPE,
 }

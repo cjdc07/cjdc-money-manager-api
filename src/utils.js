@@ -16,12 +16,12 @@ function getUserId(context) {
   throw new Error('Not authenticated');
 }
 
-async function findOrCreateCategory(category, user, transactionType) {
+async function findOrCreateCategory(category, user, transaction) {
   let result = await Category.findOne({value: category});
 
   if (!result) {
     result = new Category({
-      transactionType,
+      transaction,
       value: category,
       createdBy: user,
     });
