@@ -1,23 +1,18 @@
-const Query = require('./resolvers/Query');
-const Mutation = require('./resolvers/Mutation');
-const Subscription = require('./resolvers/Subscription');
-const User = require('./resolvers/User');
-const Account = require('./resolvers/Account');
-const Category = require('./resolvers/Category');
-const Expense = require('./resolvers/Expense');
-const Income = require('./resolvers/Income');
 const { ApolloServer } = require('apollo-server');
 const { importSchema } = require('graphql-import');
 
+const Account = require('./resolvers/Account');
+const Category = require('./resolvers/Category');
+const Mutation = require('./resolvers/Mutation');
+const Query = require('./resolvers/Query');
+const Transaction = require('./resolvers/Transaction');
+
 const resolvers = {
-  Query,
-  Mutation,
-  Subscription,
-  User,
   Account,
   Category,
-  Expense,
-  Income,
+  Mutation,
+  Query,
+  Transaction,
 }
 
 const server = new ApolloServer({
