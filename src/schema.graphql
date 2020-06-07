@@ -41,9 +41,14 @@ type AccountList {
 }
 
 type TransactionList {
+  transactions: [GroupedTransactions!]!
+}
+
+type GroupedTransactions {
   transactions: [Transaction!]!
   count: Int!
   total: Float!
+  createdAt: DateTime!
 }
 
 type CategoryList {

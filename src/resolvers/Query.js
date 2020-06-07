@@ -28,21 +28,36 @@ async function transactionList(parent, args, context) {
   // TODO: Filter by what??
   const { filter, account, type, skip, first, orderBy } = args;
 
-  const transactions = await Transaction.find({
-    $and: [{ type }, { $or: [{ account }, { from: account }, { to: account }] }]
-  }).sort({ createdAt: 'desc' });
-  const [ count ] = await Transaction.aggregate([{ '$match': { account } }]).count('value');
-  const [ total ] = await Transaction.aggregate([{ '$match': { account } }]).group({
-    '_id': null, // TODO: check if this relates to filter
-    'value': {
-      '$sum': '$amount'
-    }
-  });
+  const transactions = await Transaction.aggregate([
+    {
+      $match: {
+        $and: [
+          { type },
+          {
+            $or: [
+              { account: mongoose.Types.ObjectId(account) },
+              { from:  mongoose.Types.ObjectId(account) },
+              { to:  mongoose.Types.ObjectId(account) }
+            ]
+          },
+        ],
+      },
+    },
+    { $addFields: {'id': '$_id'} },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+        count: { $sum: 1 },
+        total: { $sum: '$amount' },
+        transactions: { $push: '$$ROOT' },
+      },
+    },
+    { $project: { _id: 0, createdAt: '$_id', count: 1, total: 1, transactions: 1 } },
+    { $sort: { createdAt: -1 } },
+  ]);
 
   return {
     transactions,
-    count: count ? count.value : 0,
-    total: total ? total.value : 0,
   }
 }
 
