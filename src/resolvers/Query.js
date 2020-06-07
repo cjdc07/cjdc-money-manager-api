@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+
 const Account = require('../models/Account');
 const Category = require('../models/Category');
 const Transaction = require('../models/Transaction');
