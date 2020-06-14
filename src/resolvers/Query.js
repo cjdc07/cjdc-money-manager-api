@@ -46,6 +46,7 @@ async function transactionList(parent, args, context) {
       },
     },
     { $addFields: {'id': '$_id'} },
+    { $sort: { createdAt: -1 } },
     {
       $group: {
         _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
