@@ -38,8 +38,8 @@ async function transactionList(parent, args, context) {
           {
             $or: [
               { account: mongoose.Types.ObjectId(account) },
-              { from:  mongoose.Types.ObjectId(account) },
-              { to:  mongoose.Types.ObjectId(account) }
+              { from:  account },
+              { to:  account }
             ]
           },
         ],
