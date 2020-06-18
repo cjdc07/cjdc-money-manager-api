@@ -11,8 +11,8 @@ async function accountList(parent, args, context) {
   const user = getUserId(context);
 
   const accounts = await Account.find({createdBy: user}).sort({ createdAt: 'asc' }).limit(first);
-  const [ count ] = await Account.aggregate([{ '$match': {} }]).count('value');
-  const [ total ] = await Account.aggregate([{ '$match': {} }]).group({
+  const [ count ] = await Account.aggregate([{ '$match': { createdBy: mongoose.Types.ObjectId(user) } }]).count('value');
+  const [ total ] = await Account.aggregate([{ '$match': { createdBy: mongoose.Types.ObjectId(user) } }]).group({
     '_id': null, // TODO: check if this relates to filter
     'value': {
       '$sum': '$balance'
