@@ -19,10 +19,15 @@ async function accountList(parent, args, context) {
     }
   });
   
+  accounts.unshift(new Account({
+    name: 'All Accounts',
+    balance: total.value,
+    color: 'black'
+  }));
+
   return {
     accounts,
     count: count ? count.value : 0,
-    total: total ? total.value : 0,
   }
 }
 
