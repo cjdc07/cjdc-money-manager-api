@@ -83,9 +83,9 @@ type Mutation {
   ): Transaction!
   deleteTransaction(id: ID!): Transaction!
   createCategory(value: String!, transaction: TransactionType!): Category!
-  signup(email: String!, password: String!, name: String!): AuthPayload!
-  # TODO: Use username and password here if not from gmail
-  login(oAuthToken: String!): AuthPayload!
+  signup(username: String!, password: String!, name: String!): AuthPayload!
+  login(username: String!, password: String!): AuthPayload!
+  gmailLogin(oAuthToken: String!): AuthPayload!
 }
 
 type AuthPayload {

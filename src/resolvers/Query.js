@@ -21,7 +21,7 @@ async function accountList(parent, args, context) {
   
   accounts.unshift(new Account({
     name: 'All Accounts',
-    balance: total.value,
+    balance: total ? total.value : 0,
     color: 'black'
   }));
 

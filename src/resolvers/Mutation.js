@@ -241,27 +241,53 @@ async function createCategory(parent, args, context) {
 }
 
 async function signup(parent, args, context) {
-  // TODO: On signup, hash email if coming from gmail
-  // TODO: change email to username instead
-  const { name, email } = args;
-  const password = await bcrypt.hash(args.password, 10)
+  const { name, username } = args;
+  const password = await bcrypt.hash(args.password, 10);
 
-  const user = new User({name, email, password});
+  try {
+    const user = new User({name, username, password});
 
-  await user.save();
+    await user.save();
 
-  const token = jwt.sign({ userId: user.id }, APP_SECRET)
+    const token = jwt.sign({ userId: user.id }, APP_SECRET)
 
-  return {
-    token,
-    user,
+    return {
+      token,
+      user,
+    }
+  } catch (error) {
+    if (error.code === 11000) {
+      throw new Error('Username already exists');
+    } else {
+      throw new Error(error);
+    }
   }
 }
 
 async function login(parent, args, context) {
+  const { username, password } = args;
+  const user = await User.findOne({ username });
+
+  if (!user) {
+    throw new Error('No such user found')
+  }
+
+  const valid = await bcrypt.compare(password, user.password)
+
+  if (!valid) {
+    throw new Error('Invalid password')
+  }
+
+  return {
+    token: jwt.sign({ userId: user.id }, APP_SECRET),
+    user,
+  }
+}
+
+async function gmailLogin(parent, args, context) {
   const { oAuthToken } = args;
   const { email } = jwt.decode(oAuthToken); // TODO: Has a lot more info other than email
-  const user = await User.findOne({email});
+  const user = await User.findOne({ username: email });
 
   if (!user) {
     throw new Error('No such user found')
@@ -283,4 +309,5 @@ module.exports = {
   createCategory,
   signup,
   login,
+  gmailLogin,
 }
