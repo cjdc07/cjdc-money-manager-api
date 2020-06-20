@@ -37,6 +37,7 @@ enum TransactionType {
 type AccountList {
   accounts: [Account!]!
   count: Int!
+  total: Float!
 }
 
 type TransactionList {

@@ -18,15 +18,10 @@ async function accountList(parent, args, context) {
       '$sum': '$balance'
     }
   });
-  
-  accounts.unshift(new Account({
-    name: 'All Accounts',
-    balance: total ? total.value : 0,
-    color: 'black'
-  }));
 
   return {
     accounts,
+    total: total ? total.value : 0,
     count: count ? count.value : 0,
   }
 }
