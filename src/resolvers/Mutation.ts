@@ -1,13 +1,15 @@
-const Account = require('../models/Account');
-const Category = require('../models/Category');
-const Transaction = require('../models/Transaction');
-const User = require('../models/User');
-const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
-const { APP_SECRET, findOrCreateCategory, getUserId } = require('../utils')
-const { TRANSACTION_TYPE } = require('../constants')
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { BaseContext } from 'apollo-server-types';
 
-async function createAccount(parent, args, context) {
+import Account, { IAccount } from '../models/Account';
+import Category, { ICategory } from '../models/Category';
+import Transaction, { ITransaction } from '../models/Transaction';
+import User, { IUser } from '../models/User';
+import { APP_SECRET, TRANSACTION_TYPE } from '../constants';
+import { findOrCreateCategory, getUserId, } from '../utils';
+
+export async function createAccount(parent: any, args: IAccount, context: BaseContext): Promise<IAccount> {
   const { name, balance, color } = args;
   const user = getUserId(context);
 
@@ -18,7 +20,6 @@ async function createAccount(parent, args, context) {
   const category = await findOrCreateCategory(
     'Account Adjustments',
     user,
-    TRANSACTION_TYPE.GENERAL,
   );
 
   if (balance > 0) {
@@ -52,17 +53,20 @@ async function createAccount(parent, args, context) {
   return account;
 }
 
-async function updateAccount(parent, args, context) {
+export async function updateAccount(parent: any, args: IAccount, context: BaseContext): Promise<IAccount> {
   const { name, balance, color, id } = args;
   const user = getUserId(context);
 
-  const account = await Account.findById(id);
+  const account: IAccount | null = await Account.findById(id);
 
   const category = await findOrCreateCategory(
     'Account Adjustments',
     user,
-    TRANSACTION_TYPE.GENERAL,
   );
+
+  if (!account) {
+    throw new Error('Account does not exist!');
+  }
 
   if (balance > account.balance) {
     const transaction = new Transaction({
@@ -94,13 +98,17 @@ async function updateAccount(parent, args, context) {
 
   const updated = await Account.findByIdAndUpdate(id, { name, balance, color }, {new : true} );
 
-  return updated;
+  return updated!;
 }
 
-async function deleteAccount(parent, args, context) {
+export async function deleteAccount(parent: any, args: IAccount, context: BaseContext): Promise<IAccount> {
   const { id } = args;
 
-  const account = await Account.findOneAndDelete({ _id: id });
+  const account: IAccount | null = await Account.findOneAndDelete({ _id: id });
+
+  if (!account) {
+    throw new Error('Account does not exist!');
+  }
 
   await Transaction.deleteMany({ account: id, type: { $ne: TRANSACTION_TYPE.TRANSFER } });
 
@@ -109,11 +117,16 @@ async function deleteAccount(parent, args, context) {
   return account;
 }
 
-async function createTransaction(parent, args, context) {
+export async function createTransaction(parent: any, args: ITransaction, context: BaseContext): Promise<ITransaction> {
   const { amount, description, from, notes, to, type } = args;
-  const user = getUserId(context);
-  const category = await findOrCreateCategory(args.category, user, type);
-  const account = await Account.findById(args.account);
+  const user: string = getUserId(context);
+  const category: ICategory = await findOrCreateCategory(args.category, user);
+  const account: IAccount | null = await Account.findById(args.account);
+
+  if (!account) {
+    throw new Error('Account does not exist!');
+  }
+
   let balance = account.balance;
 
   if (type === TRANSACTION_TYPE.TRANSFER) {
@@ -142,9 +155,13 @@ async function createTransaction(parent, args, context) {
   } else if (type === TRANSACTION_TYPE.EXPENSE) {
     balance = balance -= amount;
   } else if (type === TRANSACTION_TYPE.TRANSFER) {
+    const toAccount: IAccount | null = await Account.findById(to);
+
+    if (toAccount) {
+      await Account.findByIdAndUpdate(to, { balance: toAccount.balance += amount });
+    }
+
     balance = balance -= amount;
-    const toAccount = await Account.findById(to);
-    await Account.findByIdAndUpdate(to, { balance: toAccount.balance += amount });
   }
 
   await transaction.save();
@@ -153,12 +170,16 @@ async function createTransaction(parent, args, context) {
   return transaction;
 }
 
-async function updateTransaction(parent, args, context) {
+export async function updateTransaction(parent: any, args: ITransaction, context: BaseContext): Promise<ITransaction> {
   const { id, amount, description, from, notes, to, type } = args;
-  const user = getUserId(context);
-  const category = await findOrCreateCategory(args.category, user, type);
-  const oldTransaction = await Transaction.findById(id);
-  const account = await Account.findById(args.account);
+  const user: string = getUserId(context);
+  const category: ICategory = await findOrCreateCategory(args.category, user);
+  const account: IAccount | null = await Account.findById(args.account);
+
+  if (!account) {
+    throw new Error('Account does not exist!');
+  }
+
   let balance = account.balance;
 
   if (type === TRANSACTION_TYPE.TRANSFER) {
@@ -171,11 +192,16 @@ async function updateTransaction(parent, args, context) {
     }
   }
 
-  const updatedTransaction = await Transaction.findByIdAndUpdate(
+  const oldTransaction: ITransaction | null = await Transaction.findById(id);
+  const updatedTransaction: ITransaction | null  = await Transaction.findByIdAndUpdate(
     id,
-    { amount, description, from, notes, to, category: category.id, account: account, },
+    { amount, description, from, notes, to, category: category.id, account: account.id, },
     { new: true },
   );
+
+  if (!oldTransaction) {
+    throw new Error('Transaction does not exist!');
+  }
 
   if (type === TRANSACTION_TYPE.INCOME) {
     balance = (balance - oldTransaction.amount) + amount;
@@ -183,25 +209,39 @@ async function updateTransaction(parent, args, context) {
     balance = (balance + oldTransaction.amount) - amount;
   } else if (type === TRANSACTION_TYPE.TRANSFER) {
     if (from === account.id) {
+      const toAccount: IAccount | null = await Account.findById(to);
+      if (toAccount) {
+        await Account.findByIdAndUpdate(to, { balance: (toAccount.balance - oldTransaction.amount) + amount });
+      }
       balance = (balance + oldTransaction.amount) - amount;
-      const toAccount = await Account.findById(to);
-      await Account.findByIdAndUpdate(to, { balance: (toAccount.balance - oldTransaction.amount) + amount });
     } else {
+      const fromAccount: IAccount | null = await Account.findById(from);
+      if (fromAccount) {
+        await Account.findByIdAndUpdate(from, { balance: (fromAccount.balance + oldTransaction.amount) - amount });
+      }
       balance = (balance - oldTransaction.amount) + amount;
-      const fromAccount = await Account.findById(from);
-      await Account.findByIdAndUpdate(from, { balance: (fromAccount.balance + oldTransaction.amount) - amount });
     }
   }
 
   await Account.findByIdAndUpdate(account, { balance }, { new: true });
 
-  return updatedTransaction;
+  return updatedTransaction!;
 }
 
-async function deleteTransaction(parent, args, context) {
+export async function deleteTransaction(parent: any, args: ITransaction, context: BaseContext): Promise<ITransaction> {
   const { id } = args;
-  const transaction = await Transaction.findOneAndDelete({ _id: id });
-  const account = await Account.findById(transaction.account);
+  const transaction: ITransaction | null = await Transaction.findOneAndDelete({ _id: id });
+
+  if (!transaction) {
+    throw new Error('Transaction does not exist!');
+  }
+
+  const account: IAccount | null = await Account.findById(transaction.account);
+
+  if (!account) {
+    throw new Error('Account does not exist!');
+  }
+
   let balance = account.balance;
 
   if (transaction.type === TRANSACTION_TYPE.INCOME) {
@@ -210,13 +250,17 @@ async function deleteTransaction(parent, args, context) {
     balance = account.balance + transaction.amount;
   } else if (transaction.type === TRANSACTION_TYPE.TRANSFER) {
     if (transaction.from === account.id) {
-      balance = account.balance + transaction.amount;
       const toAccount = await Account.findById(transaction.to);
-      await Account.findByIdAndUpdate(transaction.to, { balance: toAccount.balance - transaction.amount });
+      if (toAccount) {
+        await Account.findByIdAndUpdate(transaction.to, { balance: toAccount.balance - transaction.amount });
+      }
+      balance = account.balance + transaction.amount;
     } else {
-      balance = account.balance - transaction.amount;
       const fromAccount = await Account.findById(transaction.from);
-      await Account.findByIdAndUpdate(transaction.from, { balance: fromAccount.balance + transaction.amount });
+      if (fromAccount) {
+        await Account.findByIdAndUpdate(transaction.from, { balance: fromAccount.balance + transaction.amount });
+      }
+      balance = account.balance - transaction.amount;
     }
   }
 
@@ -225,7 +269,12 @@ async function deleteTransaction(parent, args, context) {
   return transaction;
 }
 
-async function createCategory(parent, args, context) {
+interface CategoryArgs {
+  value: string;
+  transaction: string;
+}
+
+export async function createCategory(parent: any, args: CategoryArgs, context: BaseContext): Promise<ICategory> {
   const { value, transaction } = args;
   const user = getUserId(context);
 
@@ -240,7 +289,12 @@ async function createCategory(parent, args, context) {
   return category;
 }
 
-async function signup(parent, args, context) {
+interface UserAuthPayload {
+  token: string;
+  user: IUser;
+}
+
+export async function signup(parent: any, args: IUser, context: BaseContext): Promise<UserAuthPayload> {
   const { name, username } = args;
   const password = await bcrypt.hash(args.password, 10);
 
@@ -264,7 +318,7 @@ async function signup(parent, args, context) {
   }
 }
 
-async function login(parent, args, context) {
+export async function login(parent: any, args: IUser, context: BaseContext): Promise<UserAuthPayload> {
   const { username, password } = args;
   const user = await User.findOne({ username });
 
@@ -284,10 +338,14 @@ async function login(parent, args, context) {
   }
 }
 
-async function gmailLogin(parent, args, context) {
+interface GoogleLoginArgs {
+  oAuthToken: string;
+}
+
+export async function gmailLogin(parent: any, args: GoogleLoginArgs, context: BaseContext): Promise<UserAuthPayload> {
   const { oAuthToken } = args;
-  const { email } = jwt.decode(oAuthToken); // TODO: Has a lot more info other than email
-  const user = await User.findOne({ username: email });
+  const userInfo: any = jwt.decode(oAuthToken); // TODO: Has a lot more info other than email
+  const user = await User.findOne({ username: userInfo.email });
 
   if (!user) {
     throw new Error('No such user found')
@@ -297,17 +355,4 @@ async function gmailLogin(parent, args, context) {
     token: jwt.sign({ userId: user.id }, APP_SECRET),
     user,
   }
-}
-
-module.exports = {
-  createAccount,
-  updateAccount,
-  deleteAccount,
-  createTransaction,
-  updateTransaction,
-  deleteTransaction,
-  createCategory,
-  signup,
-  login,
-  gmailLogin,
 }

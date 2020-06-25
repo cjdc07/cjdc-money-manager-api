@@ -1,5 +1,20 @@
-const mongoose = require('mongoose');
-const { TRANSACTION_TYPE } = require('../constants');
+import mongoose from 'mongoose';
+
+import { TRANSACTION_TYPE } from '../constants';
+
+export interface ITransaction extends mongoose.Document {
+  account: string;
+  amount: number;
+  category: string;
+  createdAt: Date;
+  createdBy: string;
+  description: string;
+  from: string;
+  notes: string;
+  to: string;
+  type: string;
+  updatedAt: Date;
+}
 
 const TransactionSchema = new mongoose.Schema({
   account: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' },
@@ -15,4 +30,4 @@ const TransactionSchema = new mongoose.Schema({
   updatedAt: { type: Date, required: true, default: Date.now },
 });
 
-module.exports = mongoose.model('Transaction', TransactionSchema);
+export default mongoose.model<ITransaction>('Transaction', TransactionSchema);

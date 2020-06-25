@@ -1,4 +1,14 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+
+export interface IAccount extends mongoose.Document {
+  id: string;
+  name: string;
+  balance: number;
+  color: string;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string;
+}
 
 const AccountSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -9,4 +19,4 @@ const AccountSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 });
 
-module.exports = mongoose.model('Account', AccountSchema);
+export default mongoose.model<IAccount>('Account', AccountSchema);
