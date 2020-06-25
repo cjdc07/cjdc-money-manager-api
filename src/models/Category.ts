@@ -1,4 +1,11 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+
+export interface ICategory extends mongoose.Document {
+  value: string;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string;
+}
 
 const CategorySchema = new mongoose.Schema({
   value: { type: String, required: true, unique: true },
@@ -7,4 +14,4 @@ const CategorySchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 });
 
-module.exports = mongoose.model('Category', CategorySchema);
+export default mongoose.model<ICategory>('Category', CategorySchema);

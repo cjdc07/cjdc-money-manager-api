@@ -1,16 +1,28 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import { GraphQLRequestContext } from 'apollo-server-types';
 
-const Account = require('../models/Account');
-const Category = require('../models/Category');
-const Transaction = require('../models/Transaction');
-const { TRANSACTION_TYPE } = require('../constants');
-const { getUserId } = require('../utils')
+import Account, { IAccount } from '../models/Account';
+import Category, { ICategory } from '../models/Category';
+import Transaction from '../models/Transaction';
+import { getUserId } from '../utils';
 
-async function accountList(parent, args, context) {
+interface AccountListArgs {
+  first: number;
+  skip: number;
+  orderBy: string;
+}
+
+interface AccountListPayload {
+  accounts: Array<IAccount>;
+  total: number;
+  count: number;
+}
+
+export async function accountList(parent: any, args: AccountListArgs, context: GraphQLRequestContext): Promise<AccountListPayload> {
   const { first, skip, orderBy } = args;
   const user = getUserId(context);
 
-  const accounts = await Account.find({createdBy: user}).sort({ createdAt: 'asc' }).limit(first);
+  const accounts: Array<IAccount> = await Account.find({createdBy: user}).sort({ createdAt: 'asc' }).limit(first);
   const [ count ] = await Account.aggregate([{ '$match': { createdBy: mongoose.Types.ObjectId(user) } }]).count('value');
   const [ total ] = await Account.aggregate([{ '$match': { createdBy: mongoose.Types.ObjectId(user) } }]).group({
     '_id': null, // TODO: check if this relates to filter
@@ -26,10 +38,21 @@ async function accountList(parent, args, context) {
   }
 }
 
-async function transactionList(parent, args, context) {
+interface AccountListArgs {
+  filter: string;
+  account: string;
+  type: string
+  first: number;
+  skip: number;
+  orderBy: string;
+}
+
+// TODO: Create Payload Interface
+export async function transactionList(parent: any, args: AccountListArgs, context: GraphQLRequestContext) {
   // TODO: Filter by what??
   const { filter, account, type, skip, first, orderBy } = args;
 
+  // TODO: Create interface
   const transactions = await Transaction.aggregate([
     {
       $match: {
@@ -64,7 +87,12 @@ async function transactionList(parent, args, context) {
   }
 }
 
-async function categoryList(parent, args, context) {
+interface CategoryListPayload {
+  categories: Array<ICategory>;
+  count: number;
+}
+
+export async function categoryList(parent: any, args: any, context: GraphQLRequestContext): Promise<CategoryListPayload> {
   const user = getUserId(context);
 
   const categories = await Category.find({
@@ -77,10 +105,4 @@ async function categoryList(parent, args, context) {
     categories,
     count: count ? count.value : 0,
   }
-}
-
-module.exports = {
-  accountList,
-  categoryList,
-  transactionList,
 }

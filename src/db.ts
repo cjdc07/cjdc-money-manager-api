@@ -1,15 +1,12 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const options = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   connectTimeoutMS: 10000,
+  useFindAndModify: false,
 };
 
-const connect = (mongoDbUri) => mongoose.connect(mongoDbUri, options)
+export const connect = (mongoDbUri: string) => mongoose.connect(mongoDbUri, options)
   .then(() => console.log(`Successfully connected to ${mongoDbUri}`))
   .catch(error => console.error(error));
-
-module.exports = {
-  connect,
-}
