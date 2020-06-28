@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
-const Account = require('../models/Account');
-const Transaction = require('../models/Transaction');
+const Account = require('../schemas/Account');
+const Transaction = require('../schemas/Transaction');
 const utils = require('../utils');
 const { TRANSACTION_TYPE } = require('../constants');
 
@@ -56,7 +56,7 @@ afterAll((done) => {
 
 describe('Account Mutation', () => {
   beforeEach((done) => {
-    jest.spyOn(utils, 'getUserId').mockReturnValue(mockUser._id);
+    jest.spyOn(utils, 'authenticate').mockReturnValue(mockUser._id);
     jest.spyOn(utils, 'findOrCreateCategory').mockReturnValue(mockCategory);
     done();
   });
@@ -234,7 +234,7 @@ describe('Income Mutation', () => {
   let account;
 
   beforeEach(async (done) => {
-    jest.spyOn(utils, 'getUserId').mockReturnValue(mockUser._id);
+    jest.spyOn(utils, 'authenticate').mockReturnValue(mockUser._id);
     account = new Account(mockAccount);
     await account.save();
     done();
@@ -347,7 +347,7 @@ describe('Expense Mutation', () => {
   let account;
 
   beforeEach(async (done) => {
-    jest.spyOn(utils, 'getUserId').mockReturnValue(mockUser._id);
+    jest.spyOn(utils, 'authenticate').mockReturnValue(mockUser._id);
     account = new Account(mockAccount);
     await account.save();
     done();
@@ -461,7 +461,7 @@ describe('Transfer Mutation', () => {
   let transferAccount;
 
   beforeEach(async (done) => {
-    jest.spyOn(utils, 'getUserId').mockReturnValue(mockUser._id);
+    jest.spyOn(utils, 'authenticate').mockReturnValue(mockUser._id);
     account = new Account(mockAccount);
     transferAccount = new Account(mockTransferAccount);
     await account.save();

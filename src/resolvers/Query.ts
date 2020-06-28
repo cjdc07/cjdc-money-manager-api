@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
 import { GraphQLRequestContext } from 'apollo-server-types';
 
-import Account, { IAccount } from '../models/Account';
-import Category, { ICategory } from '../models/Category';
-import Transaction from '../models/Transaction';
-import { getUserId } from '../utils';
+import Account, { IAccount } from '../schemas/Account';
+import Category, { ICategory } from '../schemas/Category';
+import Transaction from '../schemas/Transaction';
+import { authenticate } from '../utils';
 
 interface AccountListArgs {
   first: number;
@@ -20,7 +20,7 @@ interface AccountListPayload {
 
 export async function accountList(parent: any, args: AccountListArgs, context: GraphQLRequestContext): Promise<AccountListPayload> {
   const { first, skip, orderBy } = args;
-  const user = getUserId(context);
+  const user = authenticate(context);
 
   const accounts: Array<IAccount> = await Account.find({createdBy: user}).sort({ createdAt: 'asc' }).limit(first);
   const [ count ] = await Account.aggregate([{ '$match': { createdBy: mongoose.Types.ObjectId(user) } }]).count('value');
@@ -48,6 +48,7 @@ interface AccountListArgs {
 }
 
 // TODO: Create Payload Interface
+// TODO: Add authentication
 export async function transactionList(parent: any, args: AccountListArgs, context: GraphQLRequestContext) {
   // TODO: Filter by what??
   const { filter, account, type, skip, first, orderBy } = args;
@@ -93,7 +94,7 @@ interface CategoryListPayload {
 }
 
 export async function categoryList(parent: any, args: any, context: GraphQLRequestContext): Promise<CategoryListPayload> {
-  const user = getUserId(context);
+  const user = authenticate(context);
 
   const categories = await Category.find({
     createdBy: user,

@@ -2,9 +2,9 @@ import jwt = require('jsonwebtoken');
 import { APP_SECRET } from './constants';
 import { BaseContext } from 'apollo-server-types';
 
-import Category, { ICategory } from './models/Category';
+import Category, { ICategory } from './schemas/Category';
 
-export function getUserId(context: BaseContext): string {
+export function authenticate(context: BaseContext): string {
   const Authorization = context.req.get('Authorization');
 
   if (Authorization) {

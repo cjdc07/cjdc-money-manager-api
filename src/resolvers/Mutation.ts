@@ -2,16 +2,17 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { BaseContext } from 'apollo-server-types';
 
-import Account, { IAccount } from '../models/Account';
-import Category, { ICategory } from '../models/Category';
-import Transaction, { ITransaction } from '../models/Transaction';
-import User, { IUser } from '../models/User';
+import Account, { IAccount } from '../schemas/Account';
+import Category, { ICategory } from '../schemas/Category';
+import Transaction, { ITransaction } from '../schemas/Transaction';
+import User, { UserAuthPayload } from '../models/User';
+import UserSchema, { IUser } from '../schemas/User';
 import { APP_SECRET, TRANSACTION_TYPE } from '../constants';
-import { findOrCreateCategory, getUserId, } from '../utils';
+import { findOrCreateCategory, authenticate, } from '../utils';
 
 export async function createAccount(parent: any, args: IAccount, context: BaseContext): Promise<IAccount> {
   const { name, balance, color } = args;
-  const user = getUserId(context);
+  const user = authenticate(context);
 
   const account = new Account({name, balance, color, createdBy: user});
 
@@ -55,7 +56,7 @@ export async function createAccount(parent: any, args: IAccount, context: BaseCo
 
 export async function updateAccount(parent: any, args: IAccount, context: BaseContext): Promise<IAccount> {
   const { name, balance, color, id } = args;
-  const user = getUserId(context);
+  const user = authenticate(context);
 
   const account: IAccount | null = await Account.findById(id);
 
@@ -119,7 +120,7 @@ export async function deleteAccount(parent: any, args: IAccount, context: BaseCo
 
 export async function createTransaction(parent: any, args: ITransaction, context: BaseContext): Promise<ITransaction> {
   const { amount, description, from, notes, to, type } = args;
-  const user: string = getUserId(context);
+  const user: string = authenticate(context);
   const category: ICategory = await findOrCreateCategory(args.category, user);
   const account: IAccount | null = await Account.findById(args.account);
 
@@ -172,7 +173,7 @@ export async function createTransaction(parent: any, args: ITransaction, context
 
 export async function updateTransaction(parent: any, args: ITransaction, context: BaseContext): Promise<ITransaction> {
   const { id, amount, description, from, notes, to, type } = args;
-  const user: string = getUserId(context);
+  const user: string = authenticate(context);
   const category: ICategory = await findOrCreateCategory(args.category, user);
   const account: IAccount | null = await Account.findById(args.account);
 
@@ -276,7 +277,7 @@ interface CategoryArgs {
 
 export async function createCategory(parent: any, args: CategoryArgs, context: BaseContext): Promise<ICategory> {
   const { value, transaction } = args;
-  const user = getUserId(context);
+  const user = authenticate(context);
 
   const category = new Category({
     value,
@@ -289,53 +290,29 @@ export async function createCategory(parent: any, args: CategoryArgs, context: B
   return category;
 }
 
-interface UserAuthPayload {
-  token: string;
-  user: IUser;
-}
-
 export async function signup(parent: any, args: IUser, context: BaseContext): Promise<UserAuthPayload> {
-  const { name, username } = args;
-  const password = await bcrypt.hash(args.password, 10);
+  const user = new User(args);
 
-  try {
-    const user = new User({name, username, password});
+  await user.save();
 
-    await user.save();
+  const token = await user.generateToken();
+  const data = (await user.getUser())!;
 
-    const token = jwt.sign({ userId: user.id }, APP_SECRET)
-
-    return {
-      token,
-      user,
-    }
-  } catch (error) {
-    if (error.code === 11000) {
-      throw new Error('Username already exists');
-    } else {
-      throw new Error(error);
-    }
-  }
+  return { user: data, token };
 }
 
 export async function login(parent: any, args: IUser, context: BaseContext): Promise<UserAuthPayload> {
-  const { username, password } = args;
-  const user = await User.findOne({ username });
+  const user = new User(args);
+  const isValid = await user.isValid();
 
-  if (!user) {
-    throw new Error('No such user found')
+  if (!isValid) {
+    throw new Error('Invalid password');
   }
 
-  const valid = await bcrypt.compare(password, user.password)
+  const token = await user.generateToken();
+  const data = (await user.getUser())!;
 
-  if (!valid) {
-    throw new Error('Invalid password')
-  }
-
-  return {
-    token: jwt.sign({ userId: user.id }, APP_SECRET),
-    user,
-  }
+  return { user: data, token };
 }
 
 interface GoogleLoginArgs {
@@ -345,14 +322,11 @@ interface GoogleLoginArgs {
 export async function gmailLogin(parent: any, args: GoogleLoginArgs, context: BaseContext): Promise<UserAuthPayload> {
   const { oAuthToken } = args;
   const userInfo: any = jwt.decode(oAuthToken); // TODO: Has a lot more info other than email
-  const user = await User.findOne({ username: userInfo.email });
 
-  if (!user) {
-    throw new Error('No such user found')
-  }
+  const user = new User({ username: userInfo.email, password: null, name: null });
+  
+  const token = await user.generateToken();
+  const data = (await user.getUser())!;
 
-  return {
-    token: jwt.sign({ userId: user.id }, APP_SECRET),
-    user,
-  }
+  return { user: data, token };
 }
