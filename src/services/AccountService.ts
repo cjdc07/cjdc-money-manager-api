@@ -1,0 +1,82 @@
+import mongoose from 'mongoose';
+
+import Account, { IAccount } from '../models/Account';
+import { ITransaction } from '../models/Transaction';
+import { TRANSACTION_TYPE } from '../constants';
+
+class AccountService {
+  static async createAccount(name: string, balance: number, color: string, createdBy: string) {
+    if (balance < 0) {
+      throw new Error('Account balance cannot be less than 0');
+    }
+
+    const account = new Account({name, balance, color, createdBy});
+    await account.save();
+    return account;
+  }
+
+  static async getAccounts(createdBy: string, skip: number, first: number) {
+    return Account.find({ createdBy }).sort({ createdAt: 'asc' }).skip(skip).limit(first);
+  }
+
+  static async getTotalCount(createdBy: string) {
+    const [ count ] = await Account.aggregate().match({ createdBy: mongoose.Types.ObjectId(createdBy) }).count('value');
+    return count ? count.value : 0;
+  }
+
+  static async getTotalBalance(createdBy: string) {
+    const [ balance ] = await Account.aggregate().match({ createdBy: mongoose.Types.ObjectId(createdBy) }).group({
+      '_id': 'totalBalance',
+      'value': {
+        '$sum': '$balance'
+      }
+    });
+    return balance ? balance.value : 0;
+  }
+
+  static async getAccount(id: string) {
+    const account = await Account.findById(id);
+
+    if (!account) {
+      throw new Error('Account does not exist!');
+    }
+
+    return account;
+  }
+
+  static async updateAccountBalance(account: IAccount, transaction: ITransaction, oldTransaction: ITransaction | null, isDeleteTransaction: boolean = false) {
+    // TODO: This looks messy. Maybe have a transactionActivity param and divide logic between delete, create, update
+    const { amount, type, to, from } = transaction;
+    const sourceAccount = (to === account.id && oldTransaction) ? Object.assign({}, await Account.findById(from)) : Object.assign({}, account.toObject());
+    const targetAccount = type === TRANSACTION_TYPE.TRANSFER ? await Account.findById(to) : null;
+
+    if (type === TRANSACTION_TYPE.INCOME) {
+      if (isDeleteTransaction) {
+        sourceAccount.balance = sourceAccount.balance - amount;
+      } else {
+        sourceAccount.balance = (oldTransaction ? sourceAccount.balance - oldTransaction.amount : sourceAccount.balance) + amount;
+      }
+    } else if (type === TRANSACTION_TYPE.EXPENSE) {
+      if (isDeleteTransaction) {
+        sourceAccount.balance = sourceAccount.balance + amount;
+      } else {
+        sourceAccount.balance = (oldTransaction ? sourceAccount.balance + oldTransaction.amount : sourceAccount.balance) - amount;
+      }
+    } else if (type === TRANSACTION_TYPE.TRANSFER) {
+      if (isDeleteTransaction) {
+        targetAccount!.balance = targetAccount!.balance - amount;
+        sourceAccount.balance = sourceAccount.balance + amount;
+      } else {
+        targetAccount!.balance = (oldTransaction ? targetAccount!.balance - oldTransaction.amount : targetAccount!.balance) + amount;
+        sourceAccount.balance = (oldTransaction ? sourceAccount.balance + oldTransaction.amount : sourceAccount.balance) - amount;
+      }
+      await Account.updateOne({ _id: targetAccount!.id }, { balance: targetAccount!.balance });
+    }
+  
+    await Account.updateOne({ _id: account.id }, { balance: sourceAccount.balance });
+
+    return { source: sourceAccount, target: targetAccount };
+  }
+}
+
+export default AccountService;

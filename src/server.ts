@@ -1,6 +1,6 @@
 import { ApolloServer } from 'apollo-server';
-import { importSchema } from 'graphql-import';
 
+import typeDefs from './typeDefs';
 import * as Account from './resolvers/Account';
 import * as Category from './resolvers/Category';
 import * as Mutation from './resolvers/Mutation';
@@ -16,7 +16,7 @@ export const resolvers = {
 }
 
 export const server = new ApolloServer({
-  typeDefs: importSchema('./src/schema.graphql'),
+  typeDefs,
   resolvers,
   context: request => ({
     ...request,

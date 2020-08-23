@@ -10,9 +10,9 @@ export interface ITransaction extends mongoose.Document {
   createdBy: string;
   description: string;
   from: string;
-  notes: string;
+  notes: string | null;
   to: string;
-  type: string;
+  type: TRANSACTION_TYPE;
   updatedAt: Date;
 }
 

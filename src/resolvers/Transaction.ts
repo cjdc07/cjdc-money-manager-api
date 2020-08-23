@@ -1,7 +1,7 @@
-import Account, { IAccount } from '../schemas/Account';
-import Category, { ICategory } from '../schemas/Category';
-import User, { IUser } from '../schemas/User';
-import { ITransaction } from '../schemas/Transaction';
+import Account, { IAccount } from '../models/Account';
+import Category, { ICategory } from '../models/Category';
+import User, { IUser } from '../models/User';
+import { ITransaction } from '../models/Transaction';
 
 export async function category(parent: ITransaction): Promise<ICategory> {
   return (await Category.findById(parent.category))!;

@@ -1,55 +1,29 @@
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { BaseContext } from 'apollo-server-types';
 
-import Account, { IAccount } from '../schemas/Account';
-import Category, { ICategory } from '../schemas/Category';
-import Transaction, { ITransaction } from '../schemas/Transaction';
-import User, { UserAuthPayload } from '../models/User';
-import UserSchema, { IUser } from '../schemas/User';
-import { APP_SECRET, TRANSACTION_TYPE } from '../constants';
+import Account, { IAccount } from '../models/Account';
+import Category, { ICategory } from '../models/Category';
+import Transaction, { ITransaction } from '../models/Transaction';
+import User, { UserAuthPayload } from '../services/User';
+import { IUser } from '../models/User';
+import { TRANSACTION_TYPE, DEFAULT_DESCRIPTIONS } from '../constants';
 import { findOrCreateCategory, authenticate, } from '../utils';
+import AccountService from '../services/AccountService';
+import TransactionService from '../services/TransactionService';
 
-export async function createAccount(parent: any, args: IAccount, context: BaseContext): Promise<IAccount> {
+export async function createAccount(parent: any, args: IAccount, context: BaseContext) {
   const { name, balance, color } = args;
   const user = authenticate(context);
+  const account = await AccountService.createAccount(name, balance, color, user)
 
-  const account = new Account({name, balance, color, createdBy: user});
-
-  await account.save();
-
+  // TODO:
   const category = await findOrCreateCategory(
-    'Account Adjustments',
+    DEFAULT_DESCRIPTIONS.ACCOUNT_ADJUSMENTS,
     user,
   );
+  //
 
-  if (balance > 0) {
-    const transaction = new Transaction({
-      account: account.id,
-      amount: balance,
-      category: category.id,
-      createdBy: user,
-      description: 'Initial Balance',
-      from: 'Me',
-      to: 'Me',
-      type: TRANSACTION_TYPE.INCOME,
-    });
-
-    await transaction.save();
-  } else if (balance < 0) {
-    const transaction = new Transaction({
-      account: account.id,
-      amount: balance * -1,
-      category: category.id,
-      createdBy: user,
-      description: 'Initial Balance',
-      from: 'Me',
-      to: 'Me',
-      type: TRANSACTION_TYPE.EXPENSE,
-    });
-
-    await transaction.save();
-  }
+  await TransactionService.createInitialBalanceTransaction(account, balance, category.id);
 
   return account;
 }
@@ -57,116 +31,40 @@ export async function createAccount(parent: any, args: IAccount, context: BaseCo
 export async function updateAccount(parent: any, args: IAccount, context: BaseContext): Promise<IAccount> {
   const { name, balance, color, id } = args;
   const user = authenticate(context);
+  const account = await AccountService.getAccount(id);
 
-  const account: IAccount | null = await Account.findById(id);
-
+  // TODO:
   const category = await findOrCreateCategory(
-    'Account Adjustments',
+    DEFAULT_DESCRIPTIONS.ACCOUNT_ADJUSMENTS,
     user,
   );
+  //
 
-  if (!account) {
-    throw new Error('Account does not exist!');
-  }
+  await TransactionService.createAccountAdjustmentTransaction(account, balance, category.id);
 
-  if (balance > account.balance) {
-    const transaction = new Transaction({
-      account: account.id,
-      amount: balance - account.balance,
-      category: category.id,
-      createdBy: user,
-      description: 'Account Adjustments',
-      from: 'Me',
-      to: 'Me',
-      type: TRANSACTION_TYPE.INCOME,
-    });
-
-    await transaction.save();
-  } else if (balance < account.balance) {
-    const transaction = new Transaction({
-      account: account.id,
-      amount: account.balance - balance,
-      category: category.id,
-      createdBy: user,
-      description: 'Account Adjustments',
-      from: 'Me',
-      to: 'Me',
-      type: TRANSACTION_TYPE.EXPENSE,
-    });
-
-    await transaction.save();
-  }
-
-  const updated = await Account.findByIdAndUpdate(id, { name, balance, color }, {new : true} );
-
-  return updated!;
+  return (await Account.findByIdAndUpdate(account.id, { name, balance, color }, {new : true} ))!;
 }
 
 export async function deleteAccount(parent: any, args: IAccount, context: BaseContext): Promise<IAccount> {
   const { id } = args;
+  const account = await AccountService.getAccount(id);
 
-  const account: IAccount | null = await Account.findOneAndDelete({ _id: id });
-
-  if (!account) {
-    throw new Error('Account does not exist!');
-  }
-
+  await Account.deleteOne({ _id: id });
   await Transaction.deleteMany({ account: id, type: { $ne: TRANSACTION_TYPE.TRANSFER } });
 
-  // TODO: when transaction is transfer, transfer transfer account ownership to 'to' account
+  // TODO: when transaction is transfer, change transfer account ownership to destination account
 
   return account;
 }
 
 export async function createTransaction(parent: any, args: ITransaction, context: BaseContext): Promise<ITransaction> {
   const { amount, description, from, notes, to, type } = args;
-  const user: string = authenticate(context);
-  const category: ICategory = await findOrCreateCategory(args.category, user);
-  const account: IAccount | null = await Account.findById(args.account);
+  const user = authenticate(context);
+  const category = await findOrCreateCategory(args.category, user);
+  const account = await AccountService.getAccount(args.account);
+  const transaction = await TransactionService.createTransaction(amount, description, from, notes, to, type, category.id, account);
 
-  if (!account) {
-    throw new Error('Account does not exist!');
-  }
-
-  let balance = account.balance;
-
-  if (type === TRANSACTION_TYPE.TRANSFER) {
-    if (amount < 1) {
-      throw new Error('Cannot transfer amount less than 1!')
-    }
-
-    if (amount > balance) {
-      throw new Error('Insufficient amount to transfer.');
-    }
-  }
-
-  const transaction = new Transaction({
-    amount,
-    description,
-    from,
-    notes,
-    to,
-    type,
-    category: category.id,
-    account: account,
-  });
-
-  if (type === TRANSACTION_TYPE.INCOME) {
-    balance = balance += amount;
-  } else if (type === TRANSACTION_TYPE.EXPENSE) {
-    balance = balance -= amount;
-  } else if (type === TRANSACTION_TYPE.TRANSFER) {
-    const toAccount: IAccount | null = await Account.findById(to);
-
-    if (toAccount) {
-      await Account.findByIdAndUpdate(to, { balance: toAccount.balance += amount });
-    }
-
-    balance = balance -= amount;
-  }
-
-  await transaction.save();
-  await Account.findByIdAndUpdate(account, { balance });
+  await AccountService.updateAccountBalance(account, transaction, null);
 
   return transaction;
 }
@@ -175,97 +73,22 @@ export async function updateTransaction(parent: any, args: ITransaction, context
   const { id, amount, description, from, notes, to, type } = args;
   const user: string = authenticate(context);
   const category: ICategory = await findOrCreateCategory(args.category, user);
-  const account: IAccount | null = await Account.findById(args.account);
+  const account = await AccountService.getAccount(args.account);
+  const oldTransaction = await TransactionService.getTransaction(id);
+  const updatedTransaction = await TransactionService.updateTransaction(id, amount, description, from, notes, to, type, category.id, account);
 
-  if (!account) {
-    throw new Error('Account does not exist!');
-  }
-
-  let balance = account.balance;
-
-  if (type === TRANSACTION_TYPE.TRANSFER) {
-    if (from === account.id && amount < 1) {
-      throw new Error('Cannot transfer amount less than 1!')
-    }
-
-    if (from === account.id && amount > balance) {
-      throw new Error('Insufficient amount to transfer.');
-    }
-  }
-
-  const oldTransaction: ITransaction | null = await Transaction.findById(id);
-  const updatedTransaction: ITransaction | null  = await Transaction.findByIdAndUpdate(
-    id,
-    { amount, description, from, notes, to, category: category.id, account: account.id, },
-    { new: true },
-  );
-
-  if (!oldTransaction) {
-    throw new Error('Transaction does not exist!');
-  }
-
-  if (type === TRANSACTION_TYPE.INCOME) {
-    balance = (balance - oldTransaction.amount) + amount;
-  } else if (type === TRANSACTION_TYPE.EXPENSE) {
-    balance = (balance + oldTransaction.amount) - amount;
-  } else if (type === TRANSACTION_TYPE.TRANSFER) {
-    if (from === account.id) {
-      const toAccount: IAccount | null = await Account.findById(to);
-      if (toAccount) {
-        await Account.findByIdAndUpdate(to, { balance: (toAccount.balance - oldTransaction.amount) + amount });
-      }
-      balance = (balance + oldTransaction.amount) - amount;
-    } else {
-      const fromAccount: IAccount | null = await Account.findById(from);
-      if (fromAccount) {
-        await Account.findByIdAndUpdate(from, { balance: (fromAccount.balance + oldTransaction.amount) - amount });
-      }
-      balance = (balance - oldTransaction.amount) + amount;
-    }
-  }
-
-  await Account.findByIdAndUpdate(account, { balance }, { new: true });
+  await AccountService.updateAccountBalance(account, updatedTransaction!, oldTransaction);
 
   return updatedTransaction!;
 }
 
 export async function deleteTransaction(parent: any, args: ITransaction, context: BaseContext): Promise<ITransaction> {
   const { id } = args;
-  const transaction: ITransaction | null = await Transaction.findOneAndDelete({ _id: id });
+  const transaction = await TransactionService.getTransaction(id);
+  const account = await AccountService.getAccount(transaction.account);
 
-  if (!transaction) {
-    throw new Error('Transaction does not exist!');
-  }
-
-  const account: IAccount | null = await Account.findById(transaction.account);
-
-  if (!account) {
-    throw new Error('Account does not exist!');
-  }
-
-  let balance = account.balance;
-
-  if (transaction.type === TRANSACTION_TYPE.INCOME) {
-    balance = account.balance - transaction.amount;
-  } else if (transaction.type === TRANSACTION_TYPE.EXPENSE) {
-    balance = account.balance + transaction.amount;
-  } else if (transaction.type === TRANSACTION_TYPE.TRANSFER) {
-    if (transaction.from === account.id) {
-      const toAccount = await Account.findById(transaction.to);
-      if (toAccount) {
-        await Account.findByIdAndUpdate(transaction.to, { balance: toAccount.balance - transaction.amount });
-      }
-      balance = account.balance + transaction.amount;
-    } else {
-      const fromAccount = await Account.findById(transaction.from);
-      if (fromAccount) {
-        await Account.findByIdAndUpdate(transaction.from, { balance: fromAccount.balance + transaction.amount });
-      }
-      balance = account.balance - transaction.amount;
-    }
-  }
-
-  await Account.findByIdAndUpdate(transaction.account, { balance });
+  await AccountService.updateAccountBalance(account, transaction!, null, true);
+  await Transaction.deleteOne({ _id: id });
 
   return transaction;
 }
