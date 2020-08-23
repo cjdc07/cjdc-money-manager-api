@@ -20,6 +20,10 @@ interface TransactionArgs {
   first: number;
 }
 
+export function health (parent: any, args: any, context: GraphQLRequestContext) {
+  return 'RUNNING'
+}
+
 export async function accounts(parent: any, args: AccountsArgs, context: GraphQLRequestContext) {
   const { first, skip } = args;
   const user = authenticate(context);
