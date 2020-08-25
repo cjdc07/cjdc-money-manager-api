@@ -7,12 +7,16 @@ class CategoryService {
     return category;
   }
 
-  static async getCategory(value: string) {
+  static async getCategoryById(id: string) {
+    return await Category.findById(id);
+  }
+
+  static async getCategoryByValue(value: string) {
     return await Category.findOne({ value });
   }
 
   static async findOrCreateCategory(value: string, createdBy: string) {
-    let category = await CategoryService.getCategory(value);
+    let category = await CategoryService.getCategoryByValue(value);
 
     if (!category) {
       category = await CategoryService.createCategory(value, createdBy);

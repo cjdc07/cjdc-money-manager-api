@@ -1,6 +1,7 @@
-import User, { IUser } from '../models/User';
+import User from '../models/User';
 import { ICategory } from '../models/Category';
 
-export async function createdBy(parent: ICategory): Promise<IUser> {
+// TODO: Use UserService
+export async function createdBy(parent: ICategory) {
   return (await User.findById(parent.createdBy))!;
 }

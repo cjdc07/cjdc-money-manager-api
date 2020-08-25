@@ -1,16 +1,17 @@
-import Account, { IAccount } from '../models/Account';
-import Category, { ICategory } from '../models/Category';
-import User, { IUser } from '../models/User';
+import User from '../models/User';
 import { ITransaction } from '../models/Transaction';
+import AccountService from '../services/AccountService';
+import CategoryService from '../services/CategoryService';
 
-export async function category(parent: ITransaction): Promise<ICategory> {
-  return (await Category.findById(parent.category))!;
+export async function category(parent: ITransaction) {
+  return await CategoryService.getCategoryById(parent.category);
 }
 
-export async function createdBy(parent: ITransaction): Promise<IUser> {
+// TODO: Use UserService
+export async function createdBy(parent: ITransaction) {
   return (await User.findById(parent.createdBy))!;
 }
 
-export async function account(parent: ITransaction): Promise<IAccount> {
-  return (await Account.findById(parent.account))!;
+export async function account(parent: ITransaction) {
+  return await AccountService.getAccount(parent.account);
 }
