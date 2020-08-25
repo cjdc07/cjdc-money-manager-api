@@ -5,10 +5,6 @@ const category = gql`
     categories: Categories!
   }
 
-  extend type Mutation {
-    createCategory(value: String!, transaction: TransactionType!): Category!
-  }
-
   type Categories {
     categories: [Category!]!
     count: Int!

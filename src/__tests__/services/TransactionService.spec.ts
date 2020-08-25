@@ -134,12 +134,6 @@ describe('TransactionService', () => {
     expect(result).to.deep.equal(expected);
   });
 
-  it('should return a transaction', async () =>{
-    sinon.mock(Transaction).expects('findById').returns(mockTransaction);
-    const result = await TransactionService.getTransaction(mockTransactionId)
-    expect(result).to.deep.equal(mockTransaction);
-  });
-
   it('should throw an error if account does not exist', async () => {
     sinon.mock(Transaction).expects('findById').returns(null);
     await expect(TransactionService.getTransaction(mockTransactionId)).to.be.rejectedWith('Transaction does not exist!');

@@ -32,10 +32,10 @@ describe('AccountService', () => {
 
     const result = await AccountService.createAccount(name, balance, color, mockUserId);
 
-    expect(result.name).to.deep.equal(name);
-    expect(result.balance).to.deep.equal(balance);
-    expect(result.color).to.deep.equal(color);
-    expect(result.createdBy.toString()).to.deep.equal(mockUserId);
+    expect(result.name).to.equal(name);
+    expect(result.balance).to.equal(balance);
+    expect(result.color).to.equal(color);
+    expect(result.createdBy.toString()).to.equal(mockUserId);
   });
 
   it ('should throw an error if creating an account with a balance of less than 0', async () => {
@@ -43,12 +43,6 @@ describe('AccountService', () => {
     await expect(
       AccountService.createAccount(name, -1, color, mockUserId)
     ).to.be.rejectedWith('Account balance cannot be less than 0');
-  });
-
-  it('should return an account', async () =>{
-    sinon.mock(Account).expects('findById').returns(mockAccount);
-    const result = await AccountService.getAccount(mockAccountId)
-    expect(result).to.deep.equal(mockAccount);
   });
 
   it('should throw an error if account does not exist', async () =>{

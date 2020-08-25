@@ -44,8 +44,9 @@ class AccountService {
     return account;
   }
 
+  // TODO: This looks messy. Maybe have a transactionActivity param and divide logic between delete, create, update
+  //       or create separate methods for INCOME, EXPENSE, and TRANSFER 
   static async updateAccountBalance(account: IAccount, transaction: ITransaction, oldTransaction: ITransaction | null, isDeleteTransaction: boolean = false) {
-    // TODO: This looks messy. Maybe have a transactionActivity param and divide logic between delete, create, update
     const { amount, type, to, from } = transaction;
     const sourceAccount = (to === account.id && oldTransaction) ? Object.assign({}, await Account.findById(from)) : Object.assign({}, account.toObject());
     const targetAccount = type === TRANSACTION_TYPE.TRANSFER ? await Account.findById(to) : null;

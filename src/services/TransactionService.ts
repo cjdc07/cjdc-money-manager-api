@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-import Transaction, { ITransaction } from '../models/Transaction';
+import Transaction from '../models/Transaction';
 import { TRANSACTION_TYPE, DEFAULT_DESCRIPTIONS } from '../constants';
 import { IAccount } from '../models/Account';
 
@@ -16,7 +16,6 @@ class TransactionService {
   }
 
   static async createTransaction(amount: number, description: string, from: string, notes: string | null, to: string, type: TRANSACTION_TYPE, categoryId: string, account: IAccount) {
-    // TODO: Maybe accept ITransaction as argument instead?
     TransactionService.validateAmount(amount, account.balance, type);
 
     const transaction = new Transaction({
@@ -37,7 +36,6 @@ class TransactionService {
   }
 
   static async updateTransaction(id: string, amount: number, description: string, from: string, notes: string | null, to: string, type: TRANSACTION_TYPE, categoryId: string, account: IAccount) {
-    // TODO: Maybe accept ITransaction as argument instead?
     TransactionService.validateAmount(amount, account.balance, type);
     return await Transaction.findByIdAndUpdate(
       { _id: id },
