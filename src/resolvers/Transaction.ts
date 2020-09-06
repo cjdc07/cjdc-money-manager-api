@@ -4,7 +4,7 @@ import AccountService from '../services/AccountService';
 import CategoryService from '../services/CategoryService';
 
 export async function category(parent: ITransaction) {
-  return await CategoryService.getCategoryById(parent.category);
+  return CategoryService.getCategoryById(parent.category);
 }
 
 // TODO: Use UserService
@@ -13,5 +13,5 @@ export async function createdBy(parent: ITransaction) {
 }
 
 export async function account(parent: ITransaction) {
-  return await AccountService.getAccount(parent.account);
+  return AccountService.getAccount(parent.account);
 }

@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { BaseContext } from 'apollo-server-types';
 
 import Account, { IAccount } from '../models/Account';
@@ -12,7 +13,7 @@ import { TRANSACTION_TYPE, DEFAULT_DESCRIPTIONS } from '../constants';
 export async function createAccount(parent: any, args: IAccount, context: BaseContext) {
   const { name, balance, color } = args;
   const user = UserService.authenticate(context);
-  const account = await AccountService.createAccount(name, balance, color, user)
+  const account = await AccountService.createAccount(name, balance, color, user);
   const category = await CategoryService.findOrCreateCategory(DEFAULT_DESCRIPTIONS.ACCOUNT_ADJUSMENTS, user);
 
   await TransactionService.createInitialBalanceTransaction(account, balance, category.id);
@@ -21,16 +22,19 @@ export async function createAccount(parent: any, args: IAccount, context: BaseCo
 }
 
 export async function updateAccount(parent: any, args: IAccount, context: BaseContext): Promise<IAccount> {
-  const { name, balance, color, id } = args;
+  const {
+    name, balance, color, id,
+  } = args;
   const user = UserService.authenticate(context);
   const account = await AccountService.getAccount(id);
   const category = await CategoryService.findOrCreateCategory(DEFAULT_DESCRIPTIONS.ACCOUNT_ADJUSMENTS, user);
 
   await TransactionService.createAccountAdjustmentTransaction(account, balance, category.id);
 
-  return (await Account.findByIdAndUpdate(account.id, { name, balance, color }, {new : true} ))!;
+  return (await Account.findByIdAndUpdate(account.id, { name, balance, color }, { new: true }))!;
 }
 
+// eslint-disable-next-line no-unused-vars
 export async function deleteAccount(parent: any, args: IAccount, context: BaseContext): Promise<IAccount> {
   const { id } = args;
   const account = await AccountService.getAccount(id);
@@ -44,7 +48,9 @@ export async function deleteAccount(parent: any, args: IAccount, context: BaseCo
 }
 
 export async function createTransaction(parent: any, args: ITransaction, context: BaseContext): Promise<ITransaction> {
-  const { amount, description, from, notes, to, type } = args;
+  const {
+    amount, description, from, notes, to, type,
+  } = args;
   const user = UserService.authenticate(context);
   const category = await CategoryService.findOrCreateCategory(args.category, user);
   const account = await AccountService.getAccount(args.account);
@@ -56,7 +62,9 @@ export async function createTransaction(parent: any, args: ITransaction, context
 }
 
 export async function updateTransaction(parent: any, args: ITransaction, context: BaseContext): Promise<ITransaction> {
-  const { id, amount, description, from, notes, to, type } = args;
+  const {
+    id, amount, description, from, notes, to, type,
+  } = args;
   const user = UserService.authenticate(context);
   const category = await CategoryService.findOrCreateCategory(args.category, user);
   const account = await AccountService.getAccount(args.account);
@@ -68,6 +76,7 @@ export async function updateTransaction(parent: any, args: ITransaction, context
   return updatedTransaction!;
 }
 
+// eslint-disable-next-line no-unused-vars
 export async function deleteTransaction(parent: any, args: ITransaction, context: BaseContext): Promise<ITransaction> {
   const { id } = args;
   const transaction = await TransactionService.getTransaction(id);
@@ -79,6 +88,7 @@ export async function deleteTransaction(parent: any, args: ITransaction, context
   return transaction;
 }
 
+// eslint-disable-next-line no-unused-vars
 export async function signup(parent: any, args: IUser, context: BaseContext) {
   const { username, password, name } = args;
 
@@ -88,6 +98,7 @@ export async function signup(parent: any, args: IUser, context: BaseContext) {
   return { user, token };
 }
 
+// eslint-disable-next-line no-unused-vars
 export async function login(parent: any, args: IUser, context: BaseContext) {
   const { username, password } = args;
   const user = await UserService.getUser(username);

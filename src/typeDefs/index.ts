@@ -1,4 +1,4 @@
-import account from './account'
+import account from './account';
 import category from './category';
 import root from './root';
 import transaction from './transaction';

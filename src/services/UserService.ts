@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { BaseContext } from 'apollo-server-types';
 
 import { APP_SECRET } from '../constants';
 import User, { IUser } from '../models/User';
-import { BaseContext } from 'apollo-server-types';
 
 class UserService {
   static authenticate(context: BaseContext) {
@@ -37,7 +37,7 @@ class UserService {
   }
 
   static generateToken(user: IUser) {
-    return jwt.sign({ userId: user.id }, APP_SECRET)
+    return jwt.sign({ userId: user.id }, APP_SECRET);
   }
 
   static async createUser(username: string, name: string, password: string) {
@@ -55,7 +55,7 @@ class UserService {
       if (error.code === 11000) {
         throw new Error('Username already exists!');
       }
-      
+
       throw new Error(error);
     }
   }

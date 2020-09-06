@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import mongoose from 'mongoose';
 
 import Transaction from '../models/Transaction';
@@ -9,7 +10,7 @@ class TransactionService {
     if (amount <= 0) {
       throw new Error('Transaction amount cannot be less than 1');
     }
-  
+
     if (type === TRANSACTION_TYPE.TRANSFER && amount > balance) {
       throw new Error('Insufficient balance to transfer amount');
     }
@@ -29,7 +30,7 @@ class TransactionService {
       account: account.id,
       createdBy: account.createdBy,
     });
-    
+
     await transaction.save();
 
     return transaction;
@@ -37,9 +38,11 @@ class TransactionService {
 
   static async updateTransaction(id: string, amount: number, description: string, from: string, notes: string | null, to: string, type: TRANSACTION_TYPE, categoryId: string, account: IAccount) {
     TransactionService.validateAmount(amount, account.balance, type);
-    return await Transaction.findByIdAndUpdate(
+    return Transaction.findByIdAndUpdate(
       { _id: id },
-      { amount, description, from, notes, to, type, category: categoryId },
+      {
+        amount, description, from, notes, to, type, category: categoryId,
+      },
       { new: true },
     );
   }
@@ -61,7 +64,7 @@ class TransactionService {
       'Me',
       TRANSACTION_TYPE.INCOME,
       categoryId,
-      account
+      account,
     );
 
     await transaction.save();
@@ -85,7 +88,7 @@ class TransactionService {
       'Me',
       type,
       categoryId,
-      account
+      account,
     );
 
     await transaction.save();
@@ -95,15 +98,15 @@ class TransactionService {
 
   static async getTransactionsGroupedByDate(createdBy: string, accountId: string, type: string, skip: number, first: number) {
     const match = {
-      $match:  {
+      $match: {
         $and: [
           { createdBy: mongoose.Types.ObjectId(createdBy) }, // TODO: Create script to add created by on some transactions (data from mLab)
           { type },
           {
             $or: [
               { account: mongoose.Types.ObjectId(accountId) },
-              { from:  accountId },
-              { to:  accountId },
+              { from: accountId },
+              { to: accountId },
             ],
           },
         ],
@@ -118,14 +121,18 @@ class TransactionService {
         count: { $sum: 1 },
         total: { $sum: '$amount' },
         transactions: { $push: '$$ROOT' },
-      }
+      },
     };
 
-    const project = { $project: { _id: 0, createdAt: '$_id', count: 1, total: 1, transactions: 1 } };
+    const project = {
+      $project: {
+        _id: 0, createdAt: '$_id', count: 1, total: 1, transactions: 1,
+      },
+    };
 
     const sort = { $sort: { createdAt: -1 } };
 
-    return await Transaction.aggregate([ match, { $skip: skip }, { $limit: first }, addFields, sort, group, project, sort ]);
+    return Transaction.aggregate([match, { $skip: skip }, { $limit: first }, addFields, sort, group, project, sort]);
   }
 
   static async getTransaction(id: string) {

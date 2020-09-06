@@ -1,4 +1,4 @@
-import Category from "../models/Category";
+import Category from '../models/Category';
 
 class CategoryService {
   static async createCategory(value: string, createdBy: string) {
@@ -8,11 +8,11 @@ class CategoryService {
   }
 
   static async getCategoryById(id: string) {
-    return await Category.findById(id);
+    return Category.findById(id);
   }
 
   static async getCategoryByValue(value: string) {
-    return await Category.findOne({ value });
+    return Category.findOne({ value });
   }
 
   static async findOrCreateCategory(value: string, createdBy: string) {
