@@ -1,11 +1,11 @@
-require('dotenv').config()
-
 import { connect } from './db';
 import { server } from './server';
 
-const mongoDbUri: string = process.env.MONGODB_URI!;
+require('dotenv').config();
+
+const dbUri: string = process.env.DB_URI!;
 const port: string = process.env.PORT!;
 
-connect(mongoDbUri);
+connect(dbUri);
 
 server.listen({ port }).then(({ url }: { url: string }) => console.log(`Server is running on ${url}`));

@@ -10,7 +10,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      - MONGODB_URI=$MONGODB_URI
+      - DB_URI=$DB_URI
     ports:
       - "80:8080"
     volumes:
