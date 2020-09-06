@@ -1,12 +1,9 @@
-import mongoose from 'mongoose';
 import { GraphQLRequestContext } from 'apollo-server-types';
 
 import AccountService from '../services/AccountService';
 import Category from '../models/Category';
-import Transaction from '../models/Transaction';
-import { authenticate } from '../utils';
-import transaction from '../typeDefs/transaction';
 import TransactionService from '../services/TransactionService';
+import UserService from '../services/UserService';
 
 interface AccountsArgs {
   first: number;
@@ -26,7 +23,7 @@ export function health (parent: any, args: any, context: GraphQLRequestContext) 
 
 export async function accounts(parent: any, args: AccountsArgs, context: GraphQLRequestContext) {
   const { first, skip } = args;
-  const user = authenticate(context);
+  const user = UserService.authenticate(context);
 
   const accounts = await AccountService.getAccounts(user, skip, first);
   const count = await AccountService.getTotalCount(user);
@@ -37,7 +34,7 @@ export async function accounts(parent: any, args: AccountsArgs, context: GraphQL
 
 export async function transactions(parent: any, args: TransactionArgs, context: GraphQLRequestContext) {
   const { account, type, skip, first } = args;
-  const user = authenticate(context);
+  const user = UserService.authenticate(context);
 
   const transactions = await TransactionService.getTransactionsGroupedByDate(user, account, type, skip, first);
 
@@ -45,7 +42,7 @@ export async function transactions(parent: any, args: TransactionArgs, context: 
 }
 
 export async function categories(parent: any, args: any, context: GraphQLRequestContext) {
-  const user = authenticate(context);
+  const user = UserService.authenticate(context);
 
   const categories = await Category.find({
     createdBy: user,

@@ -1,18 +1,17 @@
 import { BaseContext } from 'apollo-server-types';
 
 import Account, { IAccount } from '../models/Account';
+import AccountService from '../services/AccountService';
+import CategoryService from '../services/CategoryService';
 import Transaction, { ITransaction } from '../models/Transaction';
-import User, { UserAuthPayload } from '../services/User';
+import TransactionService from '../services/TransactionService';
+import UserService from '../services/UserService';
 import { IUser } from '../models/User';
 import { TRANSACTION_TYPE, DEFAULT_DESCRIPTIONS } from '../constants';
-import { authenticate, } from '../utils';
-import AccountService from '../services/AccountService';
-import TransactionService from '../services/TransactionService';
-import CategoryService from '../services/CategoryService';
 
 export async function createAccount(parent: any, args: IAccount, context: BaseContext) {
   const { name, balance, color } = args;
-  const user = authenticate(context);
+  const user = UserService.authenticate(context);
   const account = await AccountService.createAccount(name, balance, color, user)
   const category = await CategoryService.findOrCreateCategory(DEFAULT_DESCRIPTIONS.ACCOUNT_ADJUSMENTS, user);
 
@@ -23,7 +22,7 @@ export async function createAccount(parent: any, args: IAccount, context: BaseCo
 
 export async function updateAccount(parent: any, args: IAccount, context: BaseContext): Promise<IAccount> {
   const { name, balance, color, id } = args;
-  const user = authenticate(context);
+  const user = UserService.authenticate(context);
   const account = await AccountService.getAccount(id);
   const category = await CategoryService.findOrCreateCategory(DEFAULT_DESCRIPTIONS.ACCOUNT_ADJUSMENTS, user);
 
@@ -46,7 +45,7 @@ export async function deleteAccount(parent: any, args: IAccount, context: BaseCo
 
 export async function createTransaction(parent: any, args: ITransaction, context: BaseContext): Promise<ITransaction> {
   const { amount, description, from, notes, to, type } = args;
-  const user = authenticate(context);
+  const user = UserService.authenticate(context);
   const category = await CategoryService.findOrCreateCategory(args.category, user);
   const account = await AccountService.getAccount(args.account);
   const transaction = await TransactionService.createTransaction(amount, description, from, notes, to, type, category.id, account);
@@ -58,7 +57,7 @@ export async function createTransaction(parent: any, args: ITransaction, context
 
 export async function updateTransaction(parent: any, args: ITransaction, context: BaseContext): Promise<ITransaction> {
   const { id, amount, description, from, notes, to, type } = args;
-  const user: string = authenticate(context);
+  const user = UserService.authenticate(context);
   const category = await CategoryService.findOrCreateCategory(args.category, user);
   const account = await AccountService.getAccount(args.account);
   const oldTransaction = await TransactionService.getTransaction(id);
@@ -80,27 +79,21 @@ export async function deleteTransaction(parent: any, args: ITransaction, context
   return transaction;
 }
 
-export async function signup(parent: any, args: IUser, context: BaseContext): Promise<UserAuthPayload> {
-  const user = new User(args);
+export async function signup(parent: any, args: IUser, context: BaseContext) {
+  const { username, password, name } = args;
 
-  await user.save();
+  const user = await UserService.createUser(username, name, password);
+  const token = UserService.generateToken(user);
 
-  const token = await user.generateToken();
-  const data = (await user.getUser())!;
-
-  return { user: data, token };
+  return { user, token };
 }
 
-export async function login(parent: any, args: IUser, context: BaseContext): Promise<UserAuthPayload> {
-  const user = new User(args);
-  const isValid = await user.isValid();
+export async function login(parent: any, args: IUser, context: BaseContext) {
+  const { username, password } = args;
+  const user = await UserService.getUser(username);
 
-  if (!isValid) {
-    throw new Error('Invalid password');
-  }
+  await UserService.validate(password, user);
+  const token = await UserService.generateToken(user);
 
-  const token = await user.generateToken();
-  const data = (await user.getUser())!;
-
-  return { user: data, token };
+  return { user, token };
 }
