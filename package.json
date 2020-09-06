@@ -9,6 +9,10 @@
     "lint": "eslint src/**/*.ts",
     "tsc": "tsc"
   },
+  "pre-commit": [
+    "lint",
+    "test"
+  ],
   "dependencies": {
     "@types/bcryptjs": "^2.4.2",
     "@types/jsonwebtoken": "^8.5.0",
@@ -38,6 +42,7 @@
     "eslint-config-airbnb-typescript": "^10.0.0",
     "eslint-plugin-import": "^2.22.0",
     "mocha": "^8.1.1",
+    "pre-commit": "^1.2.2",
     "sinon": "^9.0.3"
   }
 }
