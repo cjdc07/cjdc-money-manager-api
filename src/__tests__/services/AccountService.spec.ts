@@ -300,4 +300,4 @@ describe('AccountService', () => {
     expect(result.source.balance).to.equal(2000);
     expect(result.target!.balance).to.equal(0);
   });
-})
+});

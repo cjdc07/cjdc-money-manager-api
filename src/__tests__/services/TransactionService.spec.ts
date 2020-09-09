@@ -139,8 +139,12 @@ describe('TransactionService', () => {
     await expect(TransactionService.getTransaction(mockTransactionId)).to.be.rejectedWith('Transaction does not exist!');
   });
 
-  it('should update a transaction', async() => {
-    const { id, description, from, notes, to, type, category } = mockTransaction;
+  it('should update a transaction', async () => {
+    const {
+      id, description, from, notes, to, type, category,
+    } = mockTransaction;
+
+    sinon.mock(TransactionService).expects('getTransaction').returns(mockTransaction);
 
     sinon.mock(Transaction).expects('findByIdAndUpdate').returns({
       id: mockTransactionId,
@@ -154,16 +158,18 @@ describe('TransactionService', () => {
   });
 
   it ('should return an error if updated transaction amount is less than 1', async () => {
+    sinon.mock(TransactionService).expects('getTransaction').returns(mockTransaction);
     sinon.stub(Transaction.prototype, 'save');
     await expect(
-      TransactionService.updateTransaction(mockTransactionId, 0, '', '', '', '', TRANSACTION_TYPE.INCOME, '', mockAccount)
+      TransactionService.updateTransaction(mockTransactionId, 0, '', '', '', '', TRANSACTION_TYPE.INCOME, '', mockAccount),
     ).to.be.rejectedWith('Transaction amount cannot be less than 1');
   });
 
   it ('should return an error if updated transfer transaction amount is less than account balance', async () => {
+    sinon.mock(TransactionService).expects('getTransaction').returns(mockTransaction);
     sinon.stub(Transaction.prototype, 'save');
     await expect(
-      TransactionService.updateTransaction(mockTransactionId, 2000, '', '', '', '', TRANSACTION_TYPE.TRANSFER, '', mockAccount)
+      TransactionService.updateTransaction(mockTransactionId, 3000, '', '', '', '', TRANSACTION_TYPE.TRANSFER, '', mockAccount),
     ).to.be.rejectedWith('Insufficient balance to transfer amount');
   });
 });

@@ -75,8 +75,16 @@ class AccountService {
         targetAccount!.balance = targetAccount!.balance - amount;
         sourceAccount.balance += amount;
       } else {
-        targetAccount!.balance = (oldTransaction ? targetAccount!.balance - oldTransaction.amount : targetAccount!.balance) + amount;
         sourceAccount.balance = (oldTransaction ? sourceAccount.balance + oldTransaction.amount : sourceAccount.balance) - amount;
+        if (oldTransaction && oldTransaction.to !== to) {
+          // TODO: create unit test for this block after refactoring method
+          const oldTargetAccount = await Account.findById(oldTransaction?.to);
+          oldTargetAccount!.balance -= oldTransaction!.amount;
+          await Account.updateOne({ _id: oldTargetAccount!.id }, { balance: oldTargetAccount!.balance });
+          targetAccount!.balance += amount;
+        } else {
+          targetAccount!.balance = (oldTransaction ? targetAccount!.balance - oldTransaction.amount : targetAccount!.balance) + amount;
+        }
       }
       await Account.updateOne({ _id: targetAccount!.id }, { balance: targetAccount!.balance });
     }

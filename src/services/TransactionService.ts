@@ -37,7 +37,10 @@ class TransactionService {
   }
 
   static async updateTransaction(id: string, amount: number, description: string, from: string, notes: string | null, to: string, type: TRANSACTION_TYPE, categoryId: string, account: IAccount) {
-    TransactionService.validateAmount(amount, account.balance, type);
+    const oldTransaction = await TransactionService.getTransaction(id);
+    // Add oldTransaction amount to account balance. This will make sure transaction amount can be updated higher
+    // than the oldTransaction amount but not higher than account.balance + oldTransaction.amount
+    TransactionService.validateAmount(amount, account.balance + oldTransaction.amount, type);
     return Transaction.findByIdAndUpdate(
       { _id: id },
       {
