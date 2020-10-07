@@ -33,7 +33,7 @@ const transaction = gql`
   }
 
   type Transactions {
-    transactions: [GroupedTransactions!]!
+    data: [GroupedTransactions!]!
   }
 
   type GroupedTransactions {

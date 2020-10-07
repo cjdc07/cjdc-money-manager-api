@@ -1,18 +1,25 @@
 import { gql } from 'apollo-server';
 
 const account = gql`
+  type Color {
+    alpha: Int!
+    red: Int!
+    green: Int!
+    blue: Int!
+  }
+
   type Account {
     id: ID!
     name: String!
     balance: Float!
-    color: String!
+    color: Color!
     createdAt: GraphQLDateTime!
     updatedAt: GraphQLDateTime!
     createdBy: User!
   }
 
   type Accounts {
-    accounts: [Account!]!
+    data: [Account!]!
     count: Int!
     total: Float!
   }

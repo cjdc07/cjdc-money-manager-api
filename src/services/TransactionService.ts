@@ -103,7 +103,7 @@ class TransactionService {
     const match = {
       $match: {
         $and: [
-          { createdBy: mongoose.Types.ObjectId(createdBy) }, // TODO: Create script to add created by on some transactions (data from mLab)
+          { createdBy: mongoose.Types.ObjectId(createdBy) },
           { type },
           {
             $or: [

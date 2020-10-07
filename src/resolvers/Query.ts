@@ -28,7 +28,7 @@ export async function accounts(parent: any, args: AccountsArgs, context: GraphQL
   const user = UserService.authenticate(context);
 
   return {
-    accounts: await AccountService.getAccounts(user, skip, first),
+    data: await AccountService.getAccounts(user, skip, first),
     total: await AccountService.getTotalBalance(user),
     count: await AccountService.getTotalCount(user),
   };
@@ -40,7 +40,7 @@ export async function transactions(parent: any, args: TransactionArgs, context: 
   } = args;
   const user = UserService.authenticate(context);
 
-  return { transactions: await TransactionService.getTransactionsGroupedByDate(user, account, type, skip, first) };
+  return { data: await TransactionService.getTransactionsGroupedByDate(user, account, type, skip, first) };
 }
 
 export async function categories(parent: any, args: any, context: GraphQLRequestContext) {
